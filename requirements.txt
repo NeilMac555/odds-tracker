@@ -1,0 +1,5 @@
+streamlit==1.52.2
+requests==2.31.0
+pandas==2.3.3
+plotly==6.5.1
+schedule==1.2.2
