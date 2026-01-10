@@ -1,100 +1,137 @@
 import requests
-import sqlite3
-from datetime import datetime
+import psycopg2
 import time
-import schedule
-
 import os
-API_KEY = os.getenv('ODDS_API_KEY', 'bc5c2e6fce5dc1683f0267a02e8afe05')
+from datetime import datetime
 
-LEAGUES = {
-    "EPL": "soccer_epl",
-    "La Liga": "soccer_spain_la_liga",
-    "Bundesliga": "soccer_germany_bundesliga",
-    "Serie A": "soccer_italy_serie_a",
-    "Ligue 1": "soccer_france_ligue_one"
-}
+# Configuration
+API_KEY = os.environ.get('ODDS_API_KEY')
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# Create database
-def init_db():
-    conn = sqlite3.connect('odds_tracker.db')
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS odds_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            league TEXT,
-            match_id TEXT,
-            home_team TEXT,
-            away_team TEXT,
-            bookmaker TEXT,
-            market TEXT,
-            outcome_name TEXT,
-            price REAL,
-            point REAL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+if not API_KEY:
+    print("ERROR: ODDS_API_KEY not found in environment variables")
+    exit(1)
 
-def collect_odds():
-    print(f"[{datetime.now()}] Collecting odds...")
+if not DATABASE_URL:
+    print("ERROR: DATABASE_URL not found in environment variables")
+    exit(1)
+
+SPORT = 'soccer'
+REGIONS = 'eu'
+MARKETS = 'h2h'
+ODDS_FORMAT = 'decimal'
+
+# Leagues to track
+LEAGUES = [
+    'soccer_epl',          # English Premier League
+    'soccer_spain_la_liga', # La Liga
+    'soccer_germany_bundesliga', # Bundesliga
+    'soccer_italy_serie_a', # Serie A
+    'soccer_france_ligue_one' # Ligue 1
+]
+
+def get_db_connection():
+    """Create database connection"""
+    return psycopg2.connect(DATABASE_URL)
+
+def fetch_odds(league):
+    """Fetch odds from The Odds API"""
+    url = f'https://api.the-odds-api.com/v4/sports/{league}/odds/'
     
-    conn = sqlite3.connect('odds_tracker.db')
-    c = conn.cursor()
+    params = {
+        'apiKey': API_KEY,
+        'regions': REGIONS,
+        'markets': MARKETS,
+        'oddsFormat': ODDS_FORMAT
+    }
     
-    for league_name, sport_key in LEAGUES.items():
-        url = f'https://api.the-odds-api.com/v4/sports/{sport_key}/odds/'
-        params = {'apiKey': API_KEY, 'regions': 'eu', 'markets': 'h2h,spreads,totals', 'oddsFormat': 'decimal'}
-        
+    try:
         response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching odds for {league}: {e}")
+        return None
+
+def save_odds(data, league_name):
+    """Save odds to database"""
+    if not data:
+        return 0
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    saved_count = 0
+    
+    for game in data:
+        home_team = game['home_team']
+        away_team = game['away_team']
         
-        if response.status_code == 200:
-            matches = response.json()
-            timestamp = datetime.now().isoformat()
+        for bookmaker in game.get('bookmakers', []):
+            bookmaker_name = bookmaker['title']
             
-            for match in matches:
-                match_id = match['id']
-                home = match['home_team']
-                away = match['away_team']
-                
-                for bookmaker in match.get('bookmakers', []):
-                    if bookmaker['key'] in ['pinnacle', 'betfair_ex_eu']:
-                        bookie_name = bookmaker['title']
-                        
-                        for market in bookmaker['markets']:
-                            market_key = market['key']
-                            
-                            for outcome in market['outcomes']:
-                                c.execute('''
-                                    INSERT INTO odds_history 
-                                    (timestamp, league, match_id, home_team, away_team, bookmaker, market, outcome_name, price, point)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                ''', (
-                                    timestamp, league_name, match_id, home, away,
-                                    bookie_name, market_key, outcome['name'],
-                                    outcome['price'], outcome.get('point', 0)
-                                ))
-            
-            print(f"✅ {league_name}: {len(matches)} matches saved")
+            for market in bookmaker.get('markets', []):
+                if market['key'] == 'h2h':
+                    outcomes = market['outcomes']
+                    
+                    # Find home, away, and draw odds
+                    home_odds = None
+                    away_odds = None
+                    draw_odds = None
+                    
+                    for outcome in outcomes:
+                        if outcome['name'] == home_team:
+                            home_odds = outcome['price']
+                        elif outcome['name'] == away_team:
+                            away_odds = outcome['price']
+                        elif outcome['name'] == 'Draw':
+                            draw_odds = outcome['price']
+                    
+                    # Only save if we have all three odds
+                    if home_odds and away_odds and draw_odds:
+                        cursor.execute('''
+                        INSERT INTO odds (league, home_team, away_team, bookmaker, 
+                                        home_odds, away_odds, draw_odds, timestamp)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        ''', (league_name, home_team, away_team, bookmaker_name,
+                              home_odds, away_odds, draw_odds, datetime.now()))
+                        saved_count += 1
     
     conn.commit()
+    cursor.close()
     conn.close()
-    print(f"[{datetime.now()}] Collection complete!\n")
+    
+    return saved_count
 
-if __name__ == "__main__":
+def collect_all_odds():
+    """Collect odds from all configured leagues"""
+    print(f"[{datetime.now().isoformat()}] Collecting odds...")
+    
+    total_saved = 0
+    
+    for league in LEAGUES:
+        league_name = league.replace('soccer_', '').replace('_', ' ').title()
+        data = fetch_odds(league)
+        
+        if data:
+            saved = save_odds(data, league_name)
+            total_saved += saved
+            print(f"✅ {league_name}: {len(data)} matches saved")
+        else:
+            print(f"❌ {league_name}: Failed to fetch data")
+    
+    print(f"[{datetime.now().isoformat()}] Collection complete!")
+    return total_saved
+
+if __name__ == '__main__':
     print("🚀 Starting Odds Collector...")
-    init_db()
     
-    # Collect immediately on start
-    collect_odds()
+    # Run initial collection
+    collect_all_odds()
     
-    # Then every 15 minutes
-    schedule.every(15).minutes.do(collect_odds)
-    
-    print("📊 Collecting odds every 15 minutes. Press Ctrl+C to stop.\n")
+    # Continue collecting every 15 minutes
+    print("\n📊 Collecting odds every 15 minutes. Press Ctrl+C to stop.\n")
     
     while True:
-        schedule.run_pending()
-        time.sleep(1)
-        
+        time.sleep(900)  # 15 minutes
+        collect_all_odds()
