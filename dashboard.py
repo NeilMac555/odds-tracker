@@ -226,23 +226,15 @@ else:
                 for bookmaker, history in bookmaker_history.items():
                     st.write(f"**{bookmaker}**")
                     
-                    # Prepare data for line chart
-                    chart_data = {
-                        'timestamp': [h['timestamp'] for h in history],
-                        'Home': [h['home_odds'] for h in history],
-                        'Draw': [h['draw_odds'] for h in history],
-                        'Away': [h['away_odds'] for h in history]
-                    }
-                    
-                    # Create chart data in format Streamlit expects
-                    import datetime as dt
+                    # Create chart data with string timestamps
                     chart_dict = {}
                     for h in history:
-                        ts = h['timestamp']
-                        chart_dict[ts] = {
-                            'Home': h['home_odds'],
-                            'Draw': h['draw_odds'],
-                            'Away': h['away_odds']
+                        # Convert timestamp to string for chart
+                        ts_str = h['timestamp'].strftime('%H:%M')
+                        chart_dict[ts_str] = {
+                            'Home': float(h['home_odds']),
+                            'Draw': float(h['draw_odds']),
+                            'Away': float(h['away_odds'])
                         }
                     
                     st.line_chart(chart_dict)
