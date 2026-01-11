@@ -226,31 +226,18 @@ else:
                 for bookmaker, history in bookmaker_history.items():
                     st.write(f"**{bookmaker}**")
                     
-                    # Create chart data with string timestamps
-                    chart_dict = {}
-                    for h in history:
-                        # Convert timestamp to string for chart
-                        ts_str = h['timestamp'].strftime('%H:%M')
-                        chart_dict[ts_str] = {
-                            'Home': float(h['home_odds']),
-                            'Draw': float(h['draw_odds']),
-                            'Away': float(h['away_odds'])
-                        }
+                    # Create chart data as lists
+                    chart_data = {
+                        'Home': [],
+                        'Draw': [],
+                        'Away': []
+                    }
                     
-                    st.line_chart(chart_dict)
-            else:
-                st.info("Not enough historical data yet. Check back after a few updates.")
-    
-    # Auto-refresh toggle
-    st.sidebar.markdown("---")
-    auto_refresh = st.sidebar.checkbox("Auto-refresh (60s)", value=False)
-    
-    if auto_refresh:
-        st.sidebar.info("Page will refresh every 60 seconds")
-        import time
-        time.sleep(60)
-        st.rerun()
-
-# Footer
-st.markdown("---")
-st.caption("OddsEdge - Professional Odds Tracking | Data updates every 5 minutes")
+                    for h in history:
+                        chart_data['Home'].append(float(h['home_odds']))
+                        chart_data['Draw'].append(float(h['draw_odds']))
+                        chart_data['Away'].append(float(h['away_odds']))
+                    
+                    # Only show chart if we have data
+                    if chart_data['Home']:
+                        st.line_chart(chart_dat
