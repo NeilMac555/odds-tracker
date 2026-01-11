@@ -240,4 +240,4 @@ else:
                     
                     # Only show chart if we have data
                     if chart_data['Home']:
-                        st.line_chart(chart_dat
+                        st.line_chart(chart_data)
