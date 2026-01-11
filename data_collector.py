@@ -30,6 +30,9 @@ LEAGUES = [
     'soccer_france_ligue_one' # Ligue 1
 ]
 
+# Only track Pinnacle
+PINNACLE_BOOKMAKER = 'Pinnacle'
+
 def get_db_connection():
     """Create database connection"""
     return psycopg2.connect(DATABASE_URL)
@@ -54,7 +57,7 @@ def fetch_odds(league):
         return None
 
 def save_odds(data, league_name):
-    """Save odds to database"""
+    """Save odds to database - ONLY Pinnacle"""
     if not data:
         return 0
     
@@ -69,6 +72,10 @@ def save_odds(data, league_name):
         
         for bookmaker in game.get('bookmakers', []):
             bookmaker_name = bookmaker['title']
+            
+            # ONLY save Pinnacle odds
+            if bookmaker_name != PINNACLE_BOOKMAKER:
+                continue
             
             for market in bookmaker.get('markets', []):
                 if market['key'] == 'h2h':
@@ -116,7 +123,7 @@ def collect_all_odds():
         if data:
             saved = save_odds(data, league_name)
             total_saved += saved
-            print(f"✅ {league_name}: {len(data)} matches saved")
+            print(f"✅ {league_name}: {saved} Pinnacle matches saved")
         else:
             print(f"❌ {league_name}: Failed to fetch data")
     
@@ -124,13 +131,13 @@ def collect_all_odds():
     return total_saved
 
 if __name__ == '__main__':
-    print("🚀 Starting Odds Collector...")
+    print("🚀 Starting Odds Collector (Pinnacle only)...")
     
     # Run initial collection
     collect_all_odds()
     
     # Continue collecting every 15 minutes
-    print("\n📊 Collecting odds every 15 minutes. Press Ctrl+C to stop.\n")
+    print("\n📊 Collecting Pinnacle odds every 15 minutes. Press Ctrl+C to stop.\n")
     
     while True:
         time.sleep(900)  # 15 minutes
