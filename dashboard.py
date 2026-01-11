@@ -1,6 +1,5 @@
 import streamlit as st
-import sqlite3
-import pandas as pd
+import psycopg2
 from datetime import datetime, timedelta
 import os
 
@@ -34,183 +33,219 @@ st.markdown('<p class="main-header">⚽ OddsEdge</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Real-time Soccer Betting Odds Tracker</p>', unsafe_allow_html=True)
 
 # Database connection
-DB_PATH = "odds_tracker.db"
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if not DATABASE_URL:
+    st.error("Database connection not configured")
+    st.stop()
 
 def get_db_connection():
     """Create database connection"""
-    return sqlite3.connect(DB_PATH)
+    return psycopg2.connect(DATABASE_URL)
 
 def load_latest_odds():
     """Load the most recent odds for each match"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     query = """
-    WITH RankedOdds AS (
-        SELECT 
-            league,
-            home_team,
-            away_team,
-            bookmaker,
-            home_odds,
-            away_odds,
-            draw_odds,
-            timestamp,
-            ROW_NUMBER() OVER (
-                PARTITION BY league, home_team, away_team, bookmaker 
-                ORDER BY timestamp DESC
-            ) as rn
+    SELECT league, home_team, away_team, bookmaker, home_odds, away_odds, draw_odds, timestamp
+    FROM (
+        SELECT *, 
+               ROW_NUMBER() OVER (
+                   PARTITION BY league, home_team, away_team, bookmaker 
+                   ORDER BY timestamp DESC
+               ) as rn
         FROM odds
-        WHERE timestamp >= datetime('now', '-24 hours')
-    )
-    SELECT 
-        league,
-        home_team,
-        away_team,
-        bookmaker,
-        home_odds,
-        away_odds,
-        draw_odds,
-        timestamp
-    FROM RankedOdds
+        WHERE timestamp >= NOW() - INTERVAL '24 hours'
+    ) ranked
     WHERE rn = 1
     ORDER BY league, home_team, bookmaker
     """
     
-    df = pd.read_sql_query(query, conn)
+    cursor.execute(query)
+    rows = cursor.fetchall()
     conn.close()
     
-    if not df.empty:
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-    
-    return df
+    return rows
 
 def load_odds_history(league, home_team, away_team, hours=24):
     """Load historical odds for a specific match"""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     query = """
-    SELECT 
-        bookmaker,
-        home_odds,
-        away_odds,
-        draw_odds,
-        timestamp
+    SELECT bookmaker, home_odds, away_odds, draw_odds, timestamp
     FROM odds
-    WHERE league = ? 
-        AND home_team = ? 
-        AND away_team = ?
-        AND timestamp >= datetime('now', ? || ' hours')
+    WHERE league = %s 
+        AND home_team = %s 
+        AND away_team = %s
+        AND timestamp >= NOW() - INTERVAL '%s hours'
     ORDER BY timestamp ASC
     """
     
-    df = pd.read_sql_query(query, conn, params=(league, home_team, away_team, f'-{hours}'))
+    cursor.execute(query, (league, home_team, away_team, hours))
+    rows = cursor.fetchall()
     conn.close()
     
-    if not df.empty:
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-    
-    return df
+    return rows
 
 # Sidebar filters
 st.sidebar.header("Filters")
 
 # Load current odds
-df = load_latest_odds()
+odds_data = load_latest_odds()
 
-if df.empty:
+if not odds_data:
     st.warning("No odds data available yet. The data collector may still be gathering initial data.")
     st.info("Check back in a few minutes, or verify that the data collector is running.")
 else:
+    # Extract unique values for filters
+    all_leagues = sorted(set(row[0] for row in odds_data))
+    all_bookmakers = sorted(set(row[3] for row in odds_data))
+    
     # League filter
-    leagues = ['All'] + sorted(df['league'].unique().tolist())
+    leagues = ['All'] + all_leagues
     selected_league = st.sidebar.selectbox("League", leagues)
     
     # Bookmaker filter
-    bookmakers = ['All'] + sorted(df['bookmaker'].unique().tolist())
+    bookmakers = ['All'] + all_bookmakers
     selected_bookmaker = st.sidebar.selectbox("Bookmaker", bookmakers)
     
     # Apply filters
-    filtered_df = df.copy()
+    filtered_data = odds_data
     if selected_league != 'All':
-        filtered_df = filtered_df[filtered_df['league'] == selected_league]
+        filtered_data = [row for row in filtered_data if row[0] == selected_league]
     if selected_bookmaker != 'All':
-        filtered_df = filtered_df[filtered_df['bookmaker'] == selected_bookmaker]
+        filtered_data = [row for row in filtered_data if row[3] == selected_bookmaker]
+    
+    # Calculate metrics
+    unique_matches = set((row[0], row[1], row[2]) for row in filtered_data)
+    unique_leagues = set(row[0] for row in filtered_data)
+    unique_bookmakers = set(row[3] for row in filtered_data)
     
     # Display metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Matches", len(filtered_df.groupby(['home_team', 'away_team'])))
+        st.metric("Total Matches", len(unique_matches))
     with col2:
-        st.metric("Leagues", filtered_df['league'].nunique())
+        st.metric("Leagues", len(unique_leagues))
     with col3:
-        st.metric("Bookmakers", filtered_df['bookmaker'].nunique())
+        st.metric("Bookmakers", len(unique_bookmakers))
     with col4:
-        if not filtered_df.empty:
-            latest_update = filtered_df['timestamp'].max()
+        if filtered_data:
+            latest_update = max(row[7] for row in filtered_data)
             minutes_ago = int((datetime.now() - latest_update).total_seconds() / 60)
             st.metric("Last Update", f"{minutes_ago}m ago")
     
     st.markdown("---")
     
-    # Group by match and display
-    matches = filtered_df.groupby(['league', 'home_team', 'away_team'])
+    # Group by match
+    matches = {}
+    for row in filtered_data:
+        league, home, away = row[0], row[1], row[2]
+        key = (league, home, away)
+        if key not in matches:
+            matches[key] = []
+        matches[key].append(row)
     
-    for (league, home, away), match_df in matches:
+    # Display each match
+    for (league, home, away), match_data in matches.items():
         with st.expander(f"⚽ {home} vs {away} ({league})", expanded=False):
             
             # Display odds table
             st.subheader("Current Odds")
             
-            odds_display = match_df[['bookmaker', 'home_odds', 'draw_odds', 'away_odds', 'timestamp']].copy()
-            odds_display['timestamp'] = odds_display['timestamp'].dt.strftime('%H:%M:%S')
-            odds_display.columns = ['Bookmaker', 'Home', 'Draw', 'Away', 'Updated']
+            # Create table
+            table_data = []
+            for row in match_data:
+                bookmaker = row[3]
+                home_odds = row[4]
+                draw_odds = row[6]
+                away_odds = row[5]
+                timestamp = row[7].strftime('%H:%M:%S')
+                table_data.append({
+                    'Bookmaker': bookmaker,
+                    'Home': f"{home_odds:.2f}",
+                    'Draw': f"{draw_odds:.2f}",
+                    'Away': f"{away_odds:.2f}",
+                    'Updated': timestamp
+                })
             
-            st.dataframe(
-                odds_display,
-                use_container_width=True,
-                hide_index=True
-            )
+            # Display as dataframe
+            st.dataframe(table_data, use_container_width=True, hide_index=True)
             
             # Best odds highlighting
             st.subheader("Best Odds")
             col1, col2, col3 = st.columns(3)
             
-            best_home = match_df.loc[match_df['home_odds'].idxmax()]
-            best_draw = match_df.loc[match_df['draw_odds'].idxmax()]
-            best_away = match_df.loc[match_df['away_odds'].idxmax()]
+            # Find best odds
+            best_home = max(match_data, key=lambda x: x[4])
+            best_draw = max(match_data, key=lambda x: x[6])
+            best_away = max(match_data, key=lambda x: x[5])
             
             with col1:
                 st.metric(
                     f"Home ({home})",
-                    f"{best_home['home_odds']:.2f}",
-                    f"{best_home['bookmaker']}"
+                    f"{best_home[4]:.2f}",
+                    f"{best_home[3]}"
                 )
             with col2:
                 st.metric(
                     "Draw",
-                    f"{best_draw['draw_odds']:.2f}",
-                    f"{best_draw['bookmaker']}"
+                    f"{best_draw[6]:.2f}",
+                    f"{best_draw[3]}"
                 )
             with col3:
                 st.metric(
                     f"Away ({away})",
-                    f"{best_away['away_odds']:.2f}",
-                    f"{best_away['bookmaker']}"
+                    f"{best_away[5]:.2f}",
+                    f"{best_away[3]}"
                 )
             
             # Historical trends
             st.subheader("Odds Movement (Last 24h)")
             
-            history_df = load_odds_history(league, home, away, hours=24)
+            history_data = load_odds_history(league, home, away, hours=24)
             
-            if not history_df.empty:
-                # Pivot data for plotting
-                for bookmaker in history_df['bookmaker'].unique():
-                    bookie_data = history_df[history_df['bookmaker'] == bookmaker].copy()
-                    bookie_data = bookie_data.set_index('timestamp')
-                    
+            if history_data:
+                # Group by bookmaker
+                bookmaker_history = {}
+                for row in history_data:
+                    bookmaker = row[0]
+                    if bookmaker not in bookmaker_history:
+                        bookmaker_history[bookmaker] = []
+                    bookmaker_history[bookmaker].append({
+                        'timestamp': row[4],
+                        'home_odds': row[1],
+                        'draw_odds': row[3],
+                        'away_odds': row[2]
+                    })
+                
+                # Display charts for each bookmaker
+                for bookmaker, history in bookmaker_history.items():
                     st.write(f"**{bookmaker}**")
-                    st.line_chart(bookie_data[['home_odds', 'draw_odds', 'away_odds']])
+                    
+                    # Prepare data for line chart
+                    chart_data = {
+                        'timestamp': [h['timestamp'] for h in history],
+                        'Home': [h['home_odds'] for h in history],
+                        'Draw': [h['draw_odds'] for h in history],
+                        'Away': [h['away_odds'] for h in history]
+                    }
+                    
+                    # Create chart data in format Streamlit expects
+                    import datetime as dt
+                    chart_dict = {}
+                    for h in history:
+                        ts = h['timestamp']
+                        chart_dict[ts] = {
+                            'Home': h['home_odds'],
+                            'Draw': h['draw_odds'],
+                            'Away': h['away_odds']
+                        }
+                    
+                    st.line_chart(chart_dict)
             else:
                 st.info("Not enough historical data yet. Check back after a few updates.")
     
