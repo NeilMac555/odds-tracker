@@ -1,7 +1,8 @@
 import streamlit as st
 import psycopg2
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
+import pandas as pd
 
 # Page configuration with custom favicon
 st.set_page_config(
@@ -90,6 +91,21 @@ def load_odds_history(league, home_team, away_team, hours=24):
     
     return rows
 
+def get_odds_direction(history, odds_type):
+    """Calculate odds movement direction"""
+    if len(history) < 2:
+        return None, None
+    
+    first_value = history[0][odds_type]
+    last_value = history[-1][odds_type]
+    
+    if last_value > first_value:
+        return "↑", "green"
+    elif last_value < first_value:
+        return "↓", "red"
+    else:
+        return "—", "gray"
+
 # Sidebar filters
 st.sidebar.header("Filters")
 
@@ -175,40 +191,12 @@ else:
             # Display as dataframe
             st.dataframe(table_data, use_container_width=True, hide_index=True)
             
-            # Best odds highlighting
-            st.subheader("Best Odds")
-            col1, col2, col3 = st.columns(3)
-            
-            # Find best odds
-            best_home = max(match_data, key=lambda x: x[4])
-            best_draw = max(match_data, key=lambda x: x[6])
-            best_away = max(match_data, key=lambda x: x[5])
-            
-            with col1:
-                st.metric(
-                    f"Home ({home})",
-                    f"{best_home[4]:.2f}",
-                    f"{best_home[3]}"
-                )
-            with col2:
-                st.metric(
-                    "Draw",
-                    f"{best_draw[6]:.2f}",
-                    f"{best_draw[3]}"
-                )
-            with col3:
-                st.metric(
-                    f"Away ({away})",
-                    f"{best_away[5]:.2f}",
-                    f"{best_away[3]}"
-                )
-            
             # Historical trends
             st.subheader("Odds Movement (Last 24h)")
             
             history_data = load_odds_history(league, home, away, hours=24)
             
-            if history_data:
+            if history_data and len(history_data) >= 2:
                 # Group by bookmaker
                 bookmaker_history = {}
                 for row in history_data:
@@ -224,20 +212,83 @@ else:
                 
                 # Display charts for each bookmaker
                 for bookmaker, history in bookmaker_history.items():
-                    st.write(f"**{bookmaker}**")
-                    
-                    # Create chart data as lists
-                    chart_data = {
-                        'Home': [],
-                        'Draw': [],
-                        'Away': []
-                    }
-                    
-                    for h in history:
-                        chart_data['Home'].append(float(h['home_odds']))
-                        chart_data['Draw'].append(float(h['draw_odds']))
-                        chart_data['Away'].append(float(h['away_odds']))
-                    
-                    # Only show chart if we have data
-                    if chart_data['Home']:
-                        st.line_chart(chart_data)
+                    if len(history) >= 2:
+                        st.write(f"**{bookmaker}**")
+                        
+                        # Create dataframe with proper datetime index
+                        timestamps = [h['timestamp'] for h in history]
+                        home_vals = [float(h['home_odds']) for h in history]
+                        draw_vals = [float(h['draw_odds']) for h in history]
+                        away_vals = [float(h['away_odds']) for h in history]
+                        
+                        df = pd.DataFrame({
+                            'Home': home_vals,
+                            'Draw': draw_vals,
+                            'Away': away_vals
+                        }, index=timestamps)
+                        
+                        st.line_chart(df)
+                        
+                        # Best odds with movement indicators
+                        st.subheader("Best Odds")
+                        col1, col2, col3 = st.columns(3)
+                        
+                        # Calculate directions
+                        home_arrow, home_color = get_odds_direction(history, 'home_odds')
+                        draw_arrow, draw_color = get_odds_direction(history, 'draw_odds')
+                        away_arrow, away_color = get_odds_direction(history, 'away_odds')
+                        
+                        # Current odds (latest)
+                        current_home = history[-1]['home_odds']
+                        current_draw = history[-1]['draw_odds']
+                        current_away = history[-1]['away_odds']
+                        
+                        with col1:
+                            if home_arrow:
+                                st.metric(
+                                    f"Home ({home})",
+                                    f"{current_home:.2f}",
+                                    f"{home_arrow} {bookmaker}",
+                                    delta_color="normal" if home_color == "green" else "inverse"
+                                )
+                            else:
+                                st.metric(f"Home ({home})", f"{current_home:.2f}", f"{bookmaker}")
+                        
+                        with col2:
+                            if draw_arrow:
+                                st.metric(
+                                    "Draw",
+                                    f"{current_draw:.2f}",
+                                    f"{home_arrow} {bookmaker}",
+                                    delta_color="normal" if draw_color == "green" else "inverse"
+                                )
+                            else:
+                                st.metric("Draw", f"{current_draw:.2f}", f"{bookmaker}")
+                        
+                        with col3:
+                            if away_arrow:
+                                st.metric(
+                                    f"Away ({away})",
+                                    f"{current_away:.2f}",
+                                    f"{away_arrow} {bookmaker}",
+                                    delta_color="normal" if away_color == "green" else "inverse"
+                                )
+                            else:
+                                st.metric(f"Away ({away})", f"{current_away:.2f}", f"{bookmaker}")
+                        
+            else:
+                st.info("Not enough historical data yet. Check back after a few updates.")
+    
+    # Auto-refresh toggle
+    st.sidebar.markdown("---")
+    auto_refresh = st.sidebar.checkbox("Auto-refresh (60s)", value=False)
+    
+    if auto_refresh:
+        st.sidebar.info("Page will refresh every 60 seconds")
+        import time
+        time.sleep(60)
+        st.rerun()
+
+# Footer
+st.markdown("---")
+st.caption("OddsEdge - Professional Odds Tracking | Data updates every 15 minutes")
