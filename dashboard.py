@@ -312,17 +312,23 @@ else:
             summary = get_match_movement_summary(league, home, away)
             
             # Display match title with summary (always visible)
-            if summary:
-                # Format summary text
-                summary_text = (
-                    f"Open: {summary['open_home']:.2f} / {summary['open_draw']:.2f} / {summary['open_away']:.2f} | "
-                    f"Now: {summary['current_home']:.2f} / {summary['current_draw']:.2f} / {summary['current_away']:.2f} | "
-                    f"Move: {summary['move_label']} {summary['move_direction']}{summary['move_percent']:.2f}% | "
-                    f"Updated {summary['minutes_ago']}m ago"
-                )
-                st.markdown(f"**⚽ {home} vs {away} ({league})**  \n{summary_text}")
-            else:
+            col1, col2 = st.columns([2, 3])
+            with col1:
                 st.markdown(f"**⚽ {home} vs {away} ({league})**")
+            with col2:
+                if summary:
+                    # Determine color for move (green for +, red for -)
+                    move_color = "green" if summary['move_direction'] == '+' else "red"
+                    move_sign = summary['move_direction'] if summary['move_direction'] == '-' else '+'  # Only show - for negative, + is implicit
+                    
+                    # Format summary text with colored move
+                    summary_text = (
+                        f"Open: {summary['open_home']:.2f} / {summary['open_draw']:.2f} / {summary['open_away']:.2f} | "
+                        f"Now: {summary['current_home']:.2f} / {summary['current_draw']:.2f} / {summary['current_away']:.2f} | "
+                        f"Move: {summary['move_label']} <span style='color: {move_color};'>{move_sign}{summary['move_percent']:.2f}%</span> | "
+                        f"Updated {summary['minutes_ago']}m ago"
+                    )
+                    st.markdown(summary_text, unsafe_allow_html=True)
             
             with st.expander("View details", expanded=False):
                 
