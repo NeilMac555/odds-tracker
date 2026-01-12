@@ -189,8 +189,8 @@ else:
             matches_by_date[match_date][key] = []
         matches_by_date[match_date][key].append(row)
     
-    # Display matches grouped by date
-    for match_date in sorted(matches_by_date.keys(), reverse=True):
+    # Display matches grouped by date (earliest first - today at top)
+    for match_date in sorted(matches_by_date.keys()):
         # Check if date is today
         if match_date == datetime.now().date():
             st.subheader(f"📅 Today - {match_date.strftime('%A, %B %d, %Y')}")
