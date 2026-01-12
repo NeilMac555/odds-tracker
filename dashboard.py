@@ -1,6 +1,6 @@
 import streamlit as st
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import pandas as pd
 
@@ -59,6 +59,11 @@ def load_latest_odds():
                ) as rn
         FROM odds
         WHERE timestamp >= NOW() - INTERVAL '24 hours'
+          AND (
+              commence_time IS NOT NULL 
+              AND commence_time >= CURRENT_DATE 
+              AND commence_time < CURRENT_DATE + INTERVAL '3 days'
+          )
     ) ranked
     WHERE rn = 1
     ORDER BY league, home_team, bookmaker
@@ -128,8 +133,8 @@ else:
     bookmakers = ['All'] + all_bookmakers
     selected_bookmaker = st.sidebar.selectbox("Bookmaker", bookmakers)
     
-    # Date filter
-    date_options = ['All', 'Today']
+    # Date filter (showing next 2-3 days only)
+    date_options = ['All', 'Today', 'Tomorrow']
     selected_date = st.sidebar.selectbox("Date", date_options)
     
     # Apply filters
@@ -142,6 +147,10 @@ else:
         today = datetime.now().date()
         # Use commence_time if available, else timestamp
         filtered_data = [row for row in filtered_data if (row[8].date() if row[8] else row[7].date()) == today]
+    elif selected_date == 'Tomorrow':
+        tomorrow = (datetime.now().date() + timedelta(days=1))
+        # Use commence_time if available
+        filtered_data = [row for row in filtered_data if row[8] and row[8].date() == tomorrow]
     
     # Calculate metrics
     unique_matches = set((row[0], row[1], row[2]) for row in filtered_data)
