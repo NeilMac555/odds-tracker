@@ -331,53 +331,6 @@ else:
                             
                             st.plotly_chart(fig, use_container_width=True)
                             
-                            # Best odds with movement indicators
-                            st.subheader("Best Odds")
-                            col1, col2, col3 = st.columns(3)
-                            
-                            # Calculate directions
-                            home_arrow, home_color = get_odds_direction(history, 'home_odds')
-                            draw_arrow, draw_color = get_odds_direction(history, 'draw_odds')
-                            away_arrow, away_color = get_odds_direction(history, 'away_odds')
-                            
-                            # Current odds (latest)
-                            current_home = history[-1]['home_odds']
-                            current_draw = history[-1]['draw_odds']
-                            current_away = history[-1]['away_odds']
-                            
-                            with col1:
-                                if home_arrow:
-                                    st.metric(
-                                        f"Home ({home})",
-                                        f"{current_home:.2f}",
-                                        f"{home_arrow} {bookmaker}",
-                                        delta_color="normal" if home_color == "green" else "inverse"
-                                    )
-                                else:
-                                    st.metric(f"Home ({home})", f"{current_home:.2f}", f"{bookmaker}")
-                            
-                            with col2:
-                                if draw_arrow:
-                                    st.metric(
-                                        "Draw",
-                                        f"{current_draw:.2f}",
-                                        f"{draw_arrow} {bookmaker}",
-                                        delta_color="normal" if draw_color == "green" else "inverse"
-                                    )
-                                else:
-                                    st.metric("Draw", f"{current_draw:.2f}", f"{bookmaker}")
-                            
-                            with col3:
-                                if away_arrow:
-                                    st.metric(
-                                        f"Away ({away})",
-                                        f"{current_away:.2f}",
-                                        f"{away_arrow} {bookmaker}",
-                                        delta_color="normal" if away_color == "green" else "inverse"
-                                    )
-                                else:
-                                    st.metric(f"Away ({away})", f"{current_away:.2f}", f"{bookmaker}")
-                            
                 else:
                     st.info("Not enough historical data yet. Check back after a few updates.")
     
