@@ -49,6 +49,8 @@ st.markdown("""
         display: inline-block;
         margin-bottom: 8px;
         animation: flash 1.5s infinite;
+        float: right;
+        margin-top: 0;
     }
     @keyframes flash {
         0%, 100% { opacity: 1; }
@@ -374,7 +376,7 @@ else:
             with col2:
                 # Display LIVE indicator on the right side if match is live
                 if is_live:
-                    st.markdown('<div class="live-indicator" style="float: right; margin-top: 0;">🔴 LIVE</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="live-indicator">🔴 LIVE</div>', unsafe_allow_html=True)
                 
                 if summary:
                     # Determine color for move (green for +, red for -)
