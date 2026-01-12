@@ -45,7 +45,7 @@ def get_db_connection():
     return psycopg2.connect(DATABASE_URL)
 
 def load_latest_odds():
-    """Load the most recent odds for each match"""
+    """Load the most recent odds for each match (next 3 days only)"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -59,6 +59,11 @@ def load_latest_odds():
                ) as rn
         FROM odds
         WHERE timestamp >= NOW() - INTERVAL '24 hours'
+          AND (
+              commence_time IS NOT NULL 
+              AND commence_time >= CURRENT_DATE 
+              AND commence_time < CURRENT_DATE + INTERVAL '3 days'
+          )
     ) ranked
     WHERE rn = 1
     ORDER BY league, home_team, bookmaker
