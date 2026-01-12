@@ -39,6 +39,21 @@ st.markdown("""
         line-height: 1.3;
         margin-top: 2px;
     }
+    .live-indicator {
+        background-color: #DC2626;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-weight: 700;
+        font-size: 0.85em;
+        display: inline-block;
+        margin-bottom: 8px;
+        animation: flash 1.5s infinite;
+    }
+    @keyframes flash {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
     </style>
 """, unsafe_allow_html=True)
 
