@@ -382,7 +382,8 @@ else:
             # Display match title with summary (always visible)
             col1, col2 = st.columns([2, 3])
             with col1:
-                st.markdown(f"**⚽ {home} vs {away} ({league})**")
+                date_label = get_date_label(match_date)
+                st.markdown(f"<span class='date-label'>{date_label}</span> **⚽ {home} vs {away} ({league})**", unsafe_allow_html=True)
             with col2:
                 # Display LIVE indicator on the right side if match is live
                 if is_live:
