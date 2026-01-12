@@ -3,6 +3,8 @@ import psycopg2
 from datetime import datetime, timedelta
 import os
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 # Page configuration with custom favicon
 st.set_page_config(
@@ -273,13 +275,61 @@ else:
                             draw_vals = [float(h['draw_odds']) for h in history]
                             away_vals = [float(h['away_odds']) for h in history]
                             
-                            df = pd.DataFrame({
-                                'Home': home_vals,
-                                'Draw': draw_vals,
-                                'Away': away_vals
-                            }, index=timestamps)
+                            # Calculate Y-axis range based on actual data with padding
+                            all_vals = home_vals + draw_vals + away_vals
+                            if all_vals:
+                                y_min = min(all_vals)
+                                y_max = max(all_vals)
+                                # Add 10% padding above and below for better visualization
+                                padding = (y_max - y_min) * 0.1
+                                y_range = [max(0, y_min - padding), y_max + padding]
+                            else:
+                                y_range = None
                             
-                            st.line_chart(df)
+                            # Create Plotly figure with custom Y-axis range
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(
+                                x=timestamps,
+                                y=home_vals,
+                                mode='lines+markers',
+                                name='Home',
+                                line=dict(color='#FF6B6B', width=2)
+                            ))
+                            fig.add_trace(go.Scatter(
+                                x=timestamps,
+                                y=draw_vals,
+                                mode='lines+markers',
+                                name='Draw',
+                                line=dict(color='#4ECDC4', width=2)
+                            ))
+                            fig.add_trace(go.Scatter(
+                                x=timestamps,
+                                y=away_vals,
+                                mode='lines+markers',
+                                name='Away',
+                                line=dict(color='#95E1D3', width=2)
+                            ))
+                            
+                            # Update layout with custom Y-axis range
+                            fig.update_layout(
+                                height=400,
+                                xaxis_title="Time",
+                                yaxis_title="Odds",
+                                yaxis=dict(range=y_range) if y_range else {},
+                                hovermode='x unified',
+                                legend=dict(
+                                    orientation="h",
+                                    yanchor="bottom",
+                                    y=1.02,
+                                    xanchor="right",
+                                    x=1
+                                ),
+                                plot_bgcolor='rgba(0,0,0,0)',
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                font=dict(color='white')
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True)
                             
                             # Best odds with movement indicators
                             st.subheader("Best Odds")
