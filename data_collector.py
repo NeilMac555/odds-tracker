@@ -1,64 +1,49 @@
 import requests
 import psycopg2
-import time
 import os
+import time
 from datetime import datetime
 
 # Configuration
 API_KEY = os.environ.get('ODDS_API_KEY')
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if not API_KEY:
-    print("ERROR: ODDS_API_KEY not found in environment variables")
-    exit(1)
-
-if not DATABASE_URL:
-    print("ERROR: DATABASE_URL not found in environment variables")
-    exit(1)
-
-SPORT = 'soccer'
-REGIONS = 'eu'
-MARKETS = 'h2h'
-ODDS_FORMAT = 'decimal'
-
 # Leagues to track
-LEAGUES = [
-    'soccer_epl',          # English Premier League
-    'soccer_spain_la_liga', # La Liga
-    'soccer_germany_bundesliga', # Bundesliga
-    'soccer_italy_serie_a', # Serie A
-    'soccer_france_ligue_one' # Ligue 1
-]
-
-# Only track Pinnacle
-PINNACLE_BOOKMAKER = 'Pinnacle'
+LEAGUES = {
+    'soccer_epl': 'EPL',
+    'soccer_spain_la_liga': 'Spain La Liga',
+    'soccer_germany_bundesliga': 'Germany Bundesliga',
+    'soccer_italy_serie_a': 'Italy Serie A',
+    'soccer_france_ligue_one': 'France Ligue One'
+}
 
 def get_db_connection():
     """Create database connection"""
     return psycopg2.connect(DATABASE_URL)
 
-def fetch_odds(league):
-    """Fetch odds from The Odds API"""
-    url = f'https://api.the-odds-api.com/v4/sports/{league}/odds/'
+def fetch_odds(league_key):
+    """Fetch odds from The Odds API for a specific league"""
+    url = f"https://api.the-odds-api.com/v4/sports/{league_key}/odds"
     
     params = {
         'apiKey': API_KEY,
-        'regions': REGIONS,
-        'markets': MARKETS,
-        'oddsFormat': ODDS_FORMAT
+        'regions': 'us,uk,eu',
+        'markets': 'h2h',
+        'oddsFormat': 'decimal',
+        'bookmakers': 'pinnacle'
     }
     
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching odds for {league}: {e}")
-        return None
+    except Exception as e:
+        print(f"Error fetching {league_key}: {e}")
+        return []
 
-def save_odds(data, league_name):
-    """Save odds to database - ONLY Pinnacle"""
-    if not data:
+def save_odds(odds_data, league_name):
+    """Save odds to database"""
+    if not odds_data:
         return 0
     
     conn = get_db_connection()
@@ -66,42 +51,48 @@ def save_odds(data, league_name):
     
     saved_count = 0
     
-    for game in data:
-        home_team = game['home_team']
-        away_team = game['away_team']
+    for match in odds_data:
+        home_team = match.get('home_team')
+        away_team = match.get('away_team')
+        commence_time = match.get('commence_time')  # NEW: Get match kickoff time
         
-        for bookmaker in game.get('bookmakers', []):
-            bookmaker_name = bookmaker['title']
+        # Convert ISO string to datetime
+        if commence_time:
+            commence_time = datetime.fromisoformat(commence_time.replace('Z', '+00:00'))
+        
+        for bookmaker in match.get('bookmakers', []):
+            bookmaker_name = bookmaker.get('key')
             
-            # ONLY save Pinnacle odds
-            if bookmaker_name != PINNACLE_BOOKMAKER:
+            # Only process Pinnacle
+            if bookmaker_name != 'pinnacle':
                 continue
             
             for market in bookmaker.get('markets', []):
-                if market['key'] == 'h2h':
-                    outcomes = market['outcomes']
+                if market.get('key') == 'h2h':
+                    outcomes = market.get('outcomes', [])
                     
-                    # Find home, away, and draw odds
+                    # Extract odds
                     home_odds = None
                     away_odds = None
                     draw_odds = None
                     
                     for outcome in outcomes:
-                        if outcome['name'] == home_team:
-                            home_odds = outcome['price']
-                        elif outcome['name'] == away_team:
-                            away_odds = outcome['price']
-                        elif outcome['name'] == 'Draw':
-                            draw_odds = outcome['price']
+                        if outcome.get('name') == home_team:
+                            home_odds = outcome.get('price')
+                        elif outcome.get('name') == away_team:
+                            away_odds = outcome.get('price')
+                        elif outcome.get('name') == 'Draw':
+                            draw_odds = outcome.get('price')
                     
-                    # Only save if we have all three odds
-                    if home_odds and away_odds and draw_odds:
-                        cursor.execute('''
-                        INSERT INTO odds (league, home_team, away_team, bookmaker, 
-                                        home_odds, away_odds, draw_odds, timestamp)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ''', (league_name, home_team, away_team, bookmaker_name,
-                              home_odds, away_odds, draw_odds, datetime.now()))
+                    # Insert into database
+                    if home_odds and away_odds:
+                        cursor.execute("""
+                            INSERT INTO odds (league, home_team, away_team, bookmaker, 
+                                            home_odds, away_odds, draw_odds, commence_time, timestamp)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                        """, (league_name, home_team, away_team, bookmaker_name,
+                              home_odds, away_odds, draw_odds, commence_time))
+                        
                         saved_count += 1
     
     conn.commit()
@@ -110,35 +101,27 @@ def save_odds(data, league_name):
     
     return saved_count
 
-def collect_all_odds():
-    """Collect odds from all configured leagues"""
-    print(f"[{datetime.now().isoformat()}] Collecting odds...")
-    
-    total_saved = 0
-    
-    for league in LEAGUES:
-        league_name = league.replace('soccer_', '').replace('_', ' ').title()
-        data = fetch_odds(league)
-        
-        if data:
-            saved = save_odds(data, league_name)
-            total_saved += saved
-            print(f"✅ {league_name}: {saved} Pinnacle matches saved")
-        else:
-            print(f"❌ {league_name}: Failed to fetch data")
-    
-    print(f"[{datetime.now().isoformat()}] Collection complete!")
-    return total_saved
-
-if __name__ == '__main__':
-    print("🚀 Starting Odds Collector (Pinnacle only)...")
-    
-    # Run initial collection
-    collect_all_odds()
-    
-    # Continue collecting every 15 minutes
-    print("\n📊 Collecting Pinnacle odds every 15 minutes. Press Ctrl+C to stop.\n")
+def main():
+    """Main collection loop"""
+    print("🎯 Starting Odds Collector (Pinnacle only)...")
     
     while True:
-        time.sleep(900)  # 15 minutes
-        collect_all_odds()
+        print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Collecting odds...")
+        
+        total_saved = 0
+        
+        for league_key, league_name in LEAGUES.items():
+            odds_data = fetch_odds(league_key)
+            saved = save_odds(odds_data, league_name)
+            total_saved += saved
+            print(f"✅ {league_name}: {saved} Pinnacle matches saved")
+            time.sleep(1)  # Respect API rate limits
+        
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Collection complete! Total: {total_saved} matches")
+        print("⏰ Collecting Pinnacle odds every 15 minutes. Press Ctrl+C to stop.")
+        
+        # Wait 15 minutes
+        time.sleep(900)
+
+if __name__ == "__main__":
+    main()
