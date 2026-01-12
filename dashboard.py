@@ -113,6 +113,93 @@ def get_odds_direction(history, odds_type):
     else:
         return "—", "gray"
 
+def calculate_no_vig_probabilities(home_odds, draw_odds, away_odds):
+    """Calculate no-vig implied probabilities from odds"""
+    # Implied probabilities
+    home_prob = 1.0 / home_odds
+    draw_prob = 1.0 / draw_odds
+    away_prob = 1.0 / away_odds
+    
+    # Total implied probability (includes vig)
+    total = home_prob + draw_prob + away_prob
+    
+    # Remove vig by normalizing
+    home_no_vig = home_prob / total
+    draw_no_vig = draw_prob / total
+    away_no_vig = away_prob / total
+    
+    return home_no_vig, draw_no_vig, away_no_vig
+
+def get_match_movement_summary(league, home_team, away_team):
+    """Get open and current odds with movement summary"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get all odds for this match in last 24h, ordered by timestamp
+    query = """
+    SELECT home_odds, draw_odds, away_odds, timestamp
+    FROM odds
+    WHERE league = %s 
+      AND home_team = %s 
+      AND away_team = %s
+      AND timestamp >= NOW() - INTERVAL '24 hours'
+    ORDER BY timestamp ASC
+    """
+    
+    cursor.execute(query, (league, home_team, away_team))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    if not rows or len(rows) < 1:
+        return None
+    
+    # First snapshot (open)
+    open_row = rows[0]
+    open_home = float(open_row[0])
+    open_draw = float(open_row[1])
+    open_away = float(open_row[2])
+    open_timestamp = open_row[3]
+    
+    # Latest snapshot (current)
+    current_row = rows[-1]
+    current_home = float(current_row[0])
+    current_draw = float(current_row[1])
+    current_away = float(current_row[2])
+    current_timestamp = current_row[3]
+    
+    # Calculate no-vig probabilities
+    open_probs = calculate_no_vig_probabilities(open_home, open_draw, open_away)
+    current_probs = calculate_no_vig_probabilities(current_home, current_draw, current_away)
+    
+    # Calculate absolute changes
+    changes = [
+        (abs(current_probs[0] - open_probs[0]) / open_probs[0] * 100, 'Home', current_probs[0] - open_probs[0]),
+        (abs(current_probs[1] - open_probs[1]) / open_probs[1] * 100, 'Draw', current_probs[1] - open_probs[1]),
+        (abs(current_probs[2] - open_probs[2]) / open_probs[2] * 100, 'Away', current_probs[2] - open_probs[2])
+    ]
+    
+    # Find biggest absolute change
+    biggest_change = max(changes, key=lambda x: x[0])
+    change_percent = biggest_change[0]
+    change_label = biggest_change[1]
+    change_direction = '+' if biggest_change[2] > 0 else '-'
+    
+    # Calculate minutes ago
+    minutes_ago = int((datetime.now() - current_timestamp).total_seconds() / 60)
+    
+    return {
+        'open_home': open_home,
+        'open_draw': open_draw,
+        'open_away': open_away,
+        'current_home': current_home,
+        'current_draw': current_draw,
+        'current_away': current_away,
+        'move_label': change_label,
+        'move_percent': change_percent,
+        'move_direction': change_direction,
+        'minutes_ago': minutes_ago
+    }
+
 # Sidebar filters
 st.sidebar.header("Filters")
 
@@ -221,7 +308,23 @@ else:
             st.subheader(f"📅 {match_date.strftime('%A, %B %d, %Y')}")
         
         for (league, home, away), match_data in matches_by_date[match_date].items():
-            with st.expander(f"⚽ {home} vs {away} ({league})", expanded=False):
+            # Get movement summary for collapsed row display
+            summary = get_match_movement_summary(league, home, away)
+            
+            # Display match title with summary (always visible)
+            if summary:
+                # Format summary text
+                summary_text = (
+                    f"Open: {summary['open_home']:.2f} / {summary['open_draw']:.2f} / {summary['open_away']:.2f} | "
+                    f"Now: {summary['current_home']:.2f} / {summary['current_draw']:.2f} / {summary['current_away']:.2f} | "
+                    f"Move: {summary['move_label']} {summary['move_direction']}{summary['move_percent']:.2f}% | "
+                    f"Updated {summary['minutes_ago']}m ago"
+                )
+                st.markdown(f"**⚽ {home} vs {away} ({league})**  \n{summary_text}")
+            else:
+                st.markdown(f"**⚽ {home} vs {away} ({league})**")
+            
+            with st.expander("View details", expanded=False):
                 
                 # Display odds table
                 st.subheader("Current Odds")
