@@ -350,8 +350,38 @@ else:
             st.subheader(f"📅 {match_date.strftime('%A, %B %d, %Y')}")
         
         for (league, home, away), match_data in matches_by_date[match_date].items():
+            # Check if match is live (commence_time has passed but not too long ago)
+            is_live = False
+            commence_time = None
+            for row in match_data:
+                if row[8]:  # commence_time exists
+                    commence_time = row[8]
+                    # Handle timezone-aware datetime
+                    if commence_time.tzinfo:
+                        now = datetime.now(commence_time.tzinfo)
+                    else:
+                        now = datetime.now()
+                    # Match is live if it started and is within 3 hours (typical match duration + overtime)
+                    time_since_start = (now - commence_time).total_seconds() / 3600
+                    if commence_time <= now and time_since_start < 3:
+                        is_live = True
+                    break
+            
+            # Skip matches that have started more than 3 hours ago
+            if commence_time:
+                if commence_time.tzinfo:
+                    now = datetime.now(commence_time.tzinfo)
+                else:
+                    now = datetime.now()
+                if (now - commence_time).total_seconds() / 3600 > 3:
+                    continue  # Skip this match, it's finished
+            
             # Get movement summary for collapsed row display
             summary = get_match_movement_summary(league, home, away)
+            
+            # Display LIVE indicator if match is live
+            if is_live:
+                st.markdown('<div class="live-indicator">🔴 LIVE</div>', unsafe_allow_html=True)
             
             # Display match title with summary (always visible)
             col1, col2 = st.columns([2, 3])
