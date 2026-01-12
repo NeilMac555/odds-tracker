@@ -284,26 +284,13 @@ else:
         # Use commence_time if available
         filtered_data = [row for row in filtered_data if row[8] and row[8].date() == tomorrow]
     
-    # Calculate metrics
-    unique_matches = set((row[0], row[1], row[2]) for row in filtered_data)
-    unique_leagues = set(row[0] for row in filtered_data)
-    unique_bookmakers = set(row[3] for row in filtered_data)
-    
-    # Display metrics
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Matches", len(unique_matches))
-    with col2:
-        st.metric("Leagues", len(unique_leagues))
-    with col3:
-        st.metric("Bookmakers", len(unique_bookmakers))
-    with col4:
-        if filtered_data:
-            latest_update = max(row[7] for row in filtered_data)
-            minutes_ago = int((datetime.now() - latest_update).total_seconds() / 60)
-            st.metric("Last Update", f"{minutes_ago}m ago")
-    
-    st.markdown("---")
+    # Calculate feed freshness (latest update time)
+    if filtered_data:
+        latest_update = max(row[7] for row in filtered_data)
+        minutes_ago = int((datetime.now() - latest_update).total_seconds() / 60)
+        # Add freshness indicator to sidebar
+        st.sidebar.markdown("---")
+        st.sidebar.caption(f"Feed active · updated {minutes_ago}m ago")
     
     # Group by date first, then by match
     # First pass: collect all rows for each match and determine the best date
