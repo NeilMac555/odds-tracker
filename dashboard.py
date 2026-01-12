@@ -319,7 +319,7 @@ else:
                 if summary:
                     # Determine color for move (green for +, red for -)
                     move_color = "green" if summary['move_direction'] == '+' else "red"
-                    move_sign = summary['move_direction'] if summary['move_direction'] == '-' else '+'  # Only show - for negative, + is implicit
+                    move_sign = summary['move_direction'] if summary['move_direction'] == '-' else '+'  # Show - for negative, + for positive
                     
                     # Format summary text with colored move
                     summary_text = (
