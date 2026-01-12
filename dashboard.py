@@ -312,18 +312,18 @@ else:
     
     # Group by date first, then by match
     # First pass: collect all rows for each match and determine the best date
-    match_rows = {}
-    for row in filtered_data:
-        league, home, away = row[0], row[1], row[2]
+        match_rows = {}
+        for row in filtered_data:
+            league, home, away = row[0], row[1], row[2]
         key = (league, home, away)
         
         if key not in match_rows:
             match_rows[key] = []
-        match_rows[key].append(row)
-    
-    # Determine the date for each match (prefer commence_time from any row)
-    match_dates = {}
-    for key, rows in match_rows.items():
+            match_rows[key].append(row)
+        
+        # Determine the date for each match (prefer commence_time from any row)
+        match_dates = {}
+        for key, rows in match_rows.items():
         # Look for any row with commence_time - that's the match date
         match_date = None
         for row in rows:
@@ -335,20 +335,20 @@ else:
         if match_date is None:
             match_date = rows[0][7].date()
         
-        match_dates[key] = match_date
-    
-    # Now group matches by their correct dates
-    matches_by_date = {}
-    for key, rows in match_rows.items():
+            match_dates[key] = match_date
+        
+        # Now group matches by their correct dates
+        matches_by_date = {}
+        for key, rows in match_rows.items():
         match_date = match_dates[key]
         
         if match_date not in matches_by_date:
             matches_by_date[match_date] = {}
         
-        matches_by_date[match_date][key] = rows
-    
-    # Display matches in single continuous list (sorted by date)
-    for match_date in sorted(matches_by_date.keys()):
+            matches_by_date[match_date][key] = rows
+        
+        # Display matches in single continuous list (sorted by date)
+        for match_date in sorted(matches_by_date.keys()):
         for (league, home, away), match_data in matches_by_date[match_date].items():
             # Check if match is live (commence_time has passed but not too long ago)
             is_live = False
@@ -529,10 +529,10 @@ else:
                             
                 else:
                     st.info("Not enough historical data yet. Check back after a few updates.")
-    
-    # Auto-refresh toggle
-    st.sidebar.markdown("---")
-    auto_refresh = st.sidebar.checkbox("Auto-refresh (60s)", value=False)
+
+# Auto-refresh toggle (always visible at bottom of sidebar)
+st.sidebar.markdown("---")
+auto_refresh = st.sidebar.checkbox("Auto-refresh (60s)", value=False)
     
     if auto_refresh:
         st.sidebar.info("Page will refresh every 60 seconds")
