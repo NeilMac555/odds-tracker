@@ -1,8 +1,9 @@
 import streamlit as st
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import pandas as pd
+import plotly.graph_objects as go
 
 # Page configuration with custom favicon
 st.set_page_config(
@@ -228,37 +229,93 @@ else:
                 history_data = load_odds_history(league, home, away, hours=24)
                 
                 if history_data and len(history_data) >= 2:
-                    # Group by bookmaker
-                    bookmaker_history = {}
+                    # Since we only track Pinnacle, get all data and sort by timestamp
+                    history = []
                     for row in history_data:
-                        bookmaker = row[0]
-                        if bookmaker not in bookmaker_history:
-                            bookmaker_history[bookmaker] = []
-                        bookmaker_history[bookmaker].append({
+                        history.append({
                             'timestamp': row[4],
                             'home_odds': row[1],
                             'draw_odds': row[3],
                             'away_odds': row[2]
                         })
                     
-                    # Display charts for each bookmaker
-                    for bookmaker, history in bookmaker_history.items():
-                        if len(history) >= 2:
-                            st.write(f"**{bookmaker}**")
+                    # Sort by timestamp to ensure chronological order
+                    history.sort(key=lambda x: x['timestamp'])
+                    
+                    # Remove duplicates - keep only latest entry for each timestamp
+                    seen_timestamps = set()
+                    unique_history = []
+                    for h in reversed(history):  # Start from newest
+                        if h['timestamp'] not in seen_timestamps:
+                            seen_timestamps.add(h['timestamp'])
+                            unique_history.append(h)
+                    unique_history.reverse()  # Back to chronological order
+                    
+                    if len(unique_history) >= 2:
+                        # Create dataframe with proper datetime index
+                        timestamps = [h['timestamp'] for h in unique_history]
+                        home_vals = [float(h['home_odds']) for h in unique_history]
+                        draw_vals = [float(h['draw_odds']) for h in unique_history]
+                        away_vals = [float(h['away_odds']) for h in unique_history]
                             
-                            # Create dataframe with proper datetime index
-                            timestamps = [h['timestamp'] for h in history]
-                            home_vals = [float(h['home_odds']) for h in history]
-                            draw_vals = [float(h['draw_odds']) for h in history]
-                            away_vals = [float(h['away_odds']) for h in history]
-                            
-                            df = pd.DataFrame({
-                                'Home': home_vals,
-                                'Draw': draw_vals,
-                                'Away': away_vals
-                            }, index=timestamps)
-                            
-                            st.line_chart(df)
+                        # Calculate Y-axis range based on actual data with padding
+                        all_vals = home_vals + draw_vals + away_vals
+                        if all_vals:
+                            y_min = min(all_vals)
+                            y_max = max(all_vals)
+                            # Add 10% padding above and below for better visualization
+                            padding = (y_max - y_min) * 0.1
+                            y_range = [max(0, y_min - padding), y_max + padding]
+                        else:
+                            y_range = None
+                        
+                        # Create Plotly figure with custom Y-axis range and markers
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(
+                            x=timestamps,
+                            y=home_vals,
+                            mode='lines+markers',
+                            name='Home',
+                            line=dict(color='#FF6B6B', width=2),
+                            marker=dict(size=4)
+                        ))
+                        fig.add_trace(go.Scatter(
+                            x=timestamps,
+                            y=draw_vals,
+                            mode='lines+markers',
+                            name='Draw',
+                            line=dict(color='#4ECDC4', width=2),
+                            marker=dict(size=4)
+                        ))
+                        fig.add_trace(go.Scatter(
+                            x=timestamps,
+                            y=away_vals,
+                            mode='lines+markers',
+                            name='Away',
+                            line=dict(color='#95E1D3', width=2),
+                            marker=dict(size=4)
+                        ))
+                        
+                        # Update layout with custom Y-axis range
+                        fig.update_layout(
+                            height=400,
+                            xaxis_title="Time",
+                            yaxis_title="Odds",
+                            yaxis=dict(range=y_range) if y_range else {},
+                            hovermode='x unified',
+                            legend=dict(
+                                orientation="h",
+                                yanchor="bottom",
+                                y=1.02,
+                                xanchor="right",
+                                x=1
+                            ),
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            font=dict(color='white')
+                        )
+                        
+                        st.plotly_chart(fig, use_container_width=True)
                             
                 else:
                     st.info("Not enough historical data yet. Check back after a few updates.")
