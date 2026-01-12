@@ -367,15 +367,15 @@ else:
             # Get movement summary for collapsed row display
             summary = get_match_movement_summary(league, home, away)
             
-            # Display LIVE indicator if match is live
-            if is_live:
-                st.markdown('<div class="live-indicator">🔴 LIVE</div>', unsafe_allow_html=True)
-            
             # Display match title with summary (always visible)
             col1, col2 = st.columns([2, 3])
             with col1:
                 st.markdown(f"**⚽ {home} vs {away} ({league})**")
             with col2:
+                # Display LIVE indicator on the right side if match is live
+                if is_live:
+                    st.markdown('<div class="live-indicator" style="float: right; margin-top: 0;">🔴 LIVE</div>', unsafe_allow_html=True)
+                
                 if summary:
                     # Determine color for move (green for +, red for -)
                     move_color = "green" if summary['move_direction'] == '+' else "red"
