@@ -171,18 +171,34 @@ def get_match_movement_summary(league, home_team, away_team):
     open_probs = calculate_no_vig_probabilities(open_home, open_draw, open_away)
     current_probs = calculate_no_vig_probabilities(current_home, current_draw, current_away)
     
-    # Calculate absolute changes
-    changes = [
+    # Calculate absolute changes in probability
+    # Note: When odds go DOWN, probability goes UP (inverse relationship)
+    # So we need to track odds direction, not probability direction
+    odds_changes = [
+        (current_home - open_home, 'Home', current_home, open_home),
+        (current_draw - open_draw, 'Draw', current_draw, open_draw),
+        (current_away - open_away, 'Away', current_away, open_away)
+    ]
+    
+    # Calculate probability changes
+    prob_changes = [
         (abs(current_probs[0] - open_probs[0]) / open_probs[0] * 100, 'Home', current_probs[0] - open_probs[0]),
         (abs(current_probs[1] - open_probs[1]) / open_probs[1] * 100, 'Draw', current_probs[1] - open_probs[1]),
         (abs(current_probs[2] - open_probs[2]) / open_probs[2] * 100, 'Away', current_probs[2] - open_probs[2])
     ]
     
-    # Find biggest absolute change
-    biggest_change = max(changes, key=lambda x: x[0])
-    change_percent = biggest_change[0]
-    change_label = biggest_change[1]
-    change_direction = '+' if biggest_change[2] > 0 else '-'
+    # Find biggest absolute probability change
+    biggest_prob_change = max(prob_changes, key=lambda x: x[0])
+    change_percent = biggest_prob_change[0]
+    change_label = biggest_prob_change[1]
+    
+    # Determine direction based on ODDS change (not probability change)
+    # When odds go DOWN, show negative. When odds go UP, show positive.
+    for odds_change, label, curr_odds, open_odds in odds_changes:
+        if label == change_label:
+            # If odds went down, show negative. If odds went up, show positive.
+            change_direction = '-' if curr_odds < open_odds else '+'
+            break
     
     # Calculate minutes ago
     minutes_ago = int((datetime.now() - current_timestamp).total_seconds() / 60)
