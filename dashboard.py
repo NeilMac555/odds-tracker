@@ -50,7 +50,7 @@ def load_latest_odds():
     cursor = conn.cursor()
     
     query = """
-    SELECT league, home_team, away_team, bookmaker, home_odds, away_odds, draw_odds, timestamp
+    SELECT league, home_team, away_team, bookmaker, home_odds, away_odds, draw_odds, timestamp, commence_time
     FROM (
         SELECT *, 
                ROW_NUMBER() OVER (
@@ -140,7 +140,8 @@ else:
         filtered_data = [row for row in filtered_data if row[3] == selected_bookmaker]
     if selected_date == 'Today':
         today = datetime.now().date()
-        filtered_data = [row for row in filtered_data if row[7].date() == today]
+        # Use commence_time if available, else timestamp
+        filtered_data = [row for row in filtered_data if (row[8].date() if row[8] else row[7].date()) == today]
     
     # Calculate metrics
     unique_matches = set((row[0], row[1], row[2]) for row in filtered_data)
@@ -164,18 +165,41 @@ else:
     st.markdown("---")
     
     # Group by date first, then by match
-    matches_by_date = {}
+    # First pass: collect all rows for each match and determine the best date
+    match_rows = {}
     for row in filtered_data:
         league, home, away = row[0], row[1], row[2]
-        match_date = row[7].date()  # Extract date from timestamp
+        key = (league, home, away)
+        
+        if key not in match_rows:
+            match_rows[key] = []
+        match_rows[key].append(row)
+    
+    # Determine the date for each match (prefer commence_time from any row)
+    match_dates = {}
+    for key, rows in match_rows.items():
+        # Look for any row with commence_time - that's the match date
+        match_date = None
+        for row in rows:
+            if row[8]:  # commence_time exists
+                match_date = row[8].date()
+                break
+        
+        # If no commence_time found, use timestamp from first row
+        if match_date is None:
+            match_date = rows[0][7].date()
+        
+        match_dates[key] = match_date
+    
+    # Now group matches by their correct dates
+    matches_by_date = {}
+    for key, rows in match_rows.items():
+        match_date = match_dates[key]
         
         if match_date not in matches_by_date:
             matches_by_date[match_date] = {}
         
-        key = (league, home, away)
-        if key not in matches_by_date[match_date]:
-            matches_by_date[match_date][key] = []
-        matches_by_date[match_date][key].append(row)
+        matches_by_date[match_date][key] = rows
     
     # Display matches grouped by date
     for match_date in sorted(matches_by_date.keys(), reverse=True):
