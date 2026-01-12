@@ -52,6 +52,12 @@ st.markdown("""
         float: right;
         margin-top: 0;
     }
+    .date-label {
+        color: #9CA3AF;
+        font-size: 0.75em;
+        margin-right: 8px;
+        font-weight: 400;
+    }
     @keyframes flash {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.5; }
@@ -125,6 +131,16 @@ def load_odds_history(league, home_team, away_team, hours=24):
     conn.close()
     
     return rows
+
+def get_date_label(match_date):
+    """Get small inline date label: Today, Tomorrow, or abbreviated day (e.g., Tue)"""
+    today = datetime.now().date()
+    if match_date == today:
+        return "Today"
+    elif match_date == today + timedelta(days=1):
+        return "Tomorrow"
+    else:
+        return match_date.strftime("%a")  # Abbreviated day name (Mon, Tue, Wed, etc.)
 
 def get_odds_direction(history, odds_type):
     """Calculate odds movement direction"""
@@ -331,14 +347,8 @@ else:
         
         matches_by_date[match_date][key] = rows
     
-    # Display matches grouped by date (today first, then future dates)
+    # Display matches in single continuous list (sorted by date)
     for match_date in sorted(matches_by_date.keys()):
-        # Check if date is today
-        if match_date == datetime.now().date():
-            st.subheader(f"📅 Today - {match_date.strftime('%A, %B %d, %Y')}")
-        else:
-            st.subheader(f"📅 {match_date.strftime('%A, %B %d, %Y')}")
-        
         for (league, home, away), match_data in matches_by_date[match_date].items():
             # Check if match is live (commence_time has passed but not too long ago)
             is_live = False
