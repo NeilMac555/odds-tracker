@@ -207,6 +207,9 @@ def get_match_movement_summary(league, home_team, away_team):
     ]
     
     # Calculate probability changes
+    # Formula: p_now_nv - p_open_nv (probability delta)
+    # When odds increase, probability decreases → delta is negative → show negative
+    # When odds decrease, probability increases → delta is positive → show positive
     prob_changes = [
         (abs(current_probs[0] - open_probs[0]) / open_probs[0] * 100, 'Home', current_probs[0] - open_probs[0]),
         (abs(current_probs[1] - open_probs[1]) / open_probs[1] * 100, 'Draw', current_probs[1] - open_probs[1]),
@@ -217,14 +220,12 @@ def get_match_movement_summary(league, home_team, away_team):
     biggest_prob_change = max(prob_changes, key=lambda x: x[0])
     change_percent = biggest_prob_change[0]
     change_label = biggest_prob_change[1]
+    prob_delta = biggest_prob_change[2]  # This is p_now_nv - p_open_nv
     
-    # Determine direction based on ODDS change (not probability change)
-    # When odds go DOWN, show negative. When odds go UP, show positive.
-    for odds_change, label, curr_odds, open_odds in odds_changes:
-        if label == change_label:
-            # If odds went down, show negative. If odds went up, show positive.
-            change_direction = '-' if curr_odds < open_odds else '+'
-            break
+    # Determine direction based on PROBABILITY delta (not odds direction)
+    # If probability delta is positive (probability increased, odds decreased), show positive
+    # If probability delta is negative (probability decreased, odds increased), show negative
+    change_direction = '+' if prob_delta > 0 else '-'
     
     # Calculate minutes ago
     minutes_ago = int((datetime.now() - current_timestamp).total_seconds() / 60)
