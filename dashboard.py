@@ -28,6 +28,17 @@ st.markdown("""
         color: #6E8898;
         margin-bottom: 2rem;
     }
+    .move-summary-line1 {
+        font-size: 1.05em;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+    .move-summary-line2 {
+        font-size: 0.9em;
+        color: #9CA3AF;
+        line-height: 1.3;
+        margin-top: 2px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -337,14 +348,23 @@ else:
                     move_color = "green" if summary['move_direction'] == '+' else "red"
                     move_sign = summary['move_direction'] if summary['move_direction'] == '-' else '+'  # Show - for negative, + for positive
                     
-                    # Format summary text with colored move
-                    summary_text = (
-                        f"Open: {summary['open_home']:.2f} / {summary['open_draw']:.2f} / {summary['open_away']:.2f} | "
-                        f"Now: {summary['current_home']:.2f} / {summary['current_draw']:.2f} / {summary['current_away']:.2f} | "
-                        f"Move: {summary['move_label']} <span style='color: {move_color};'>{move_sign}{summary['move_percent']:.2f}%</span> | "
-                        f"Updated {summary['minutes_ago']}m ago"
+                    # Format summary as two-line layout
+                    # Line 1: Move and Updated (primary, larger)
+                    line1 = (
+                        f"<div class='move-summary-line1'>"
+                        f"<strong>Move:</strong> {summary['move_label']} "
+                        f"<span style='color: {move_color}; font-weight: 600;'>{move_sign}{summary['move_percent']:.2f}%</span> "
+                        f"· Updated {summary['minutes_ago']}m ago"
+                        f"</div>"
                     )
-                    st.markdown(summary_text, unsafe_allow_html=True)
+                    # Line 2: Odds comparison (secondary, smaller, muted)
+                    line2 = (
+                        f"<div class='move-summary-line2'>"
+                        f"Open: {summary['open_home']:.2f} / {summary['open_draw']:.2f} / {summary['open_away']:.2f} → "
+                        f"Now: {summary['current_home']:.2f} / {summary['current_draw']:.2f} / {summary['current_away']:.2f}"
+                        f"</div>"
+                    )
+                    st.markdown(line1 + line2, unsafe_allow_html=True)
             
             with st.expander("View details", expanded=False):
                 
