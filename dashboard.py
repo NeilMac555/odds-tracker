@@ -92,6 +92,61 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
     }
     
+    /* Compact status text */
+    .status-text {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.5);
+        text-align: right;
+        margin-top: 0.5rem;
+        margin-bottom: 0;
+        padding-top: 0;
+    }
+    
+    /* Reduce top padding */
+    .main .block-container {
+        padding-top: 1rem !important;
+    }
+    
+    /* Reduce spacing after header */
+    .main .block-container > div:first-child {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+    
+    /* Biggest Movers card styling */
+    .mover-card {
+        padding: 20px 24px;
+        margin-bottom: 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background-color: rgba(0, 0, 0, 0.25);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+    
+    .mover-card:hover {
+        background-color: rgba(0, 0, 0, 0.35);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .mover-match {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 8px;
+        letter-spacing: -0.01em;
+    }
+    
+    .mover-details {
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 0.95rem;
+        margin-top: 6px;
+        display: inline-block;
+        line-height: 1.6;
+    }
+    
     /* Ensure flag emojis render properly */
     .flag-emoji {
         font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", "EmojiSymbols", "EmojiOne Mozilla", "Twemoji Mozilla", "Segoe UI Symbol", sans-serif;
@@ -228,9 +283,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Header
-st.markdown('<p class="main-header">⚽ OddsEdge</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Real-time Soccer Betting Odds Tracker</p>', unsafe_allow_html=True)
+# Header with compact status
+header_col1, header_col2 = st.columns([0.7, 0.3])
+with header_col1:
+    st.markdown('<p class="main-header">⚽ OddsEdge</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">Real-time Soccer Betting Odds Tracker</p>', unsafe_allow_html=True)
+with header_col2:
+    # Status placeholder - will be updated after odds_data loads
+    status_placeholder = st.empty()
 
 # Database connection
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -552,6 +612,14 @@ for league in [None] + SUPPORTED_LEAGUES:
 # Get the selected league value
 selected_league = st.session_state.selected_league
 
+# Update status text
+if odds_data:
+    latest_update = max(row[7] for row in odds_data)
+    minutes_ago = int((datetime.now() - latest_update).total_seconds() / 60)
+    status_placeholder.markdown(f'<div class="status-text">Feed active · updated {minutes_ago}m ago</div>', unsafe_allow_html=True)
+else:
+    status_placeholder.markdown('<div class="status-text">Feed active · no data</div>', unsafe_allow_html=True)
+
 if not odds_data:
     st.warning("No odds data available yet. The data collector may still be gathering initial data.")
     st.info("Check back in a few minutes, or verify that the data collector is running.")
@@ -561,27 +629,53 @@ else:
     if selected_league is not None:
         filtered_data = [row for row in filtered_data if row[0] == selected_league]
     
-    # Calculate metrics
-    unique_matches = set((row[0], row[1], row[2]) for row in filtered_data)
-    unique_leagues = set(row[0] for row in filtered_data)
-    unique_bookmakers = set(row[3] for row in filtered_data)
+    # Biggest Movers Section (show first)
+    st.subheader("Biggest Movers (Last 24h)")
+    movers = get_biggest_movers()
     
-    # Display metrics
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Matches", len(unique_matches))
-    with col2:
-        st.metric("Leagues", len(unique_leagues))
-    with col3:
-        st.metric("Bookmakers", len(unique_bookmakers))
-    with col4:
-        if filtered_data:
-            latest_update = max(row[7] for row in filtered_data)
-            minutes_ago = int((datetime.now() - latest_update).total_seconds() / 60)
-            st.metric("Last Update", f"{minutes_ago}m ago")
+    if movers:
+        for i, mover in enumerate(movers):
+            league = mover['league']
+            home = mover['home_team']
+            away = mover['away_team']
+            outcome = mover['outcome']
+            delta_pct = mover['delta_pct']
+            minutes_ago = mover['minutes_ago']
+            
+            # Get league flag
+            league_flag_html = get_league_flag_html(league)
+            league_name = "Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '')
+            
+            # Format delta with sign, color, and arrow
+            # Betting semantics:
+            # - Odds shortened (probability increased) = green up arrow (team more likely)
+            # - Odds drifted (probability decreased) = red down arrow (team less likely)
+            if delta_pct > 0:
+                # Probability increased (odds shortened) - green up arrow
+                delta_sign = "+"
+                delta_color = "#44ff44"  # Green
+                arrow = "▲"
+                delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
+            else:
+                # Probability decreased (odds drifted) - red down arrow
+                delta_sign = "−"
+                delta_color = "#ff4444"  # Red
+                arrow = "▼"
+                delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
+            
+            # Create modern card row
+            row_html = f"""
+            <div class="mover-card">
+                <div class="mover-match">{home} vs {away} ({league_flag_html} {league_name})</div>
+                <div class="mover-details">{outcome} <span style="color: {delta_color}; font-weight: 600; font-size: 1.05em;">{delta_display}</span> · Updated {minutes_ago}m ago</div>
+            </div>
+            """
+            st.markdown(row_html, unsafe_allow_html=True)
+    else:
+        st.info("No movement data available yet.")
     
-    # Add spacing before match listings (removed heavy divider)
-    st.markdown("<br>", unsafe_allow_html=True)
+    # Add spacing before match listings
+    st.markdown("<br><br>", unsafe_allow_html=True)
     
     # Group by date first, then by match
     matches_by_date = {}
