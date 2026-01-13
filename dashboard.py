@@ -206,6 +206,52 @@ def load_odds_history(league, home_team, away_team, hours=24):
     
     return rows
 
+def get_opening_odds(league, home_team, away_team, bookmaker):
+    """Get the first recorded odds for a match (opening odds)"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    query = """
+    SELECT home_odds, away_odds, draw_odds, timestamp
+    FROM odds
+    WHERE league = %s 
+        AND home_team = %s 
+        AND away_team = %s
+        AND bookmaker = %s
+    ORDER BY timestamp ASC
+    LIMIT 1
+    """
+    
+    cursor.execute(query, (league, home_team, away_team, bookmaker))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        return {
+            'home_odds': row[0],
+            'away_odds': row[1],
+            'draw_odds': row[2],
+            'timestamp': row[3]
+        }
+    return None
+
+def calculate_odds_change(opening_odds, current_odds):
+    """Calculate percentage change and direction for odds"""
+    if opening_odds is None or current_odds is None:
+        return None, None, None
+    
+    change = ((current_odds - opening_odds) / opening_odds) * 100
+    
+    if change > 0:
+        # Odds increased (less likely to win) - green up arrow
+        return change, "↑", "green"
+    elif change < 0:
+        # Odds decreased (more likely to win) - red down arrow
+        return abs(change), "↓", "red"
+    else:
+        # No change
+        return 0, "—", "gray"
+
 def get_odds_direction(history, odds_type):
     """Calculate odds movement direction"""
     if len(history) < 2:
@@ -313,24 +359,83 @@ else:
                 # Display odds table
                 st.subheader("Current Odds")
                 
-                # Create table
-                table_data = []
+                # Get opening odds for comparison
+                league, home, away = match_data[0][0], match_data[0][1], match_data[0][2]
+                
+                # Create table with opening odds comparison
+                table_rows = []
                 for row in match_data:
                     bookmaker = row[3]
                     home_odds = row[4]
                     draw_odds = row[6]
                     away_odds = row[5]
                     timestamp = row[7].strftime('%H:%M:%S')
-                    table_data.append({
+                    
+                    # Get opening odds for this bookmaker
+                    opening = get_opening_odds(league, home, away, bookmaker)
+                    
+                    # Format Home odds with change indicator
+                    if opening:
+                        home_change, home_arrow, home_color = calculate_odds_change(opening['home_odds'], home_odds)
+                        if home_change is not None and home_change > 0:
+                            arrow_color = "#00ff00" if home_color == "green" else "#ff0000"
+                            home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} <span style='color: {arrow_color}; font-weight: bold;'>{home_arrow} {home_change:.1f}%</span>"
+                        else:
+                            home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} (— 0.0%)"
+                    else:
+                        home_display = f"{home_odds:.2f} (No opening data)"
+                    
+                    # Format Draw odds with change indicator
+                    if opening:
+                        draw_change, draw_arrow, draw_color = calculate_odds_change(opening['draw_odds'], draw_odds)
+                        if draw_change is not None and draw_change > 0:
+                            arrow_color = "#00ff00" if draw_color == "green" else "#ff0000"
+                            draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} <span style='color: {arrow_color}; font-weight: bold;'>{draw_arrow} {draw_change:.1f}%</span>"
+                        else:
+                            draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} (— 0.0%)"
+                    else:
+                        draw_display = f"{draw_odds:.2f} (No opening data)"
+                    
+                    # Format Away odds with change indicator
+                    if opening:
+                        away_change, away_arrow, away_color = calculate_odds_change(opening['away_odds'], away_odds)
+                        if away_change is not None and away_change > 0:
+                            arrow_color = "#00ff00" if away_color == "green" else "#ff0000"
+                            away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} <span style='color: {arrow_color}; font-weight: bold;'>{away_arrow} {away_change:.1f}%</span>"
+                        else:
+                            away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} (— 0.0%)"
+                    else:
+                        away_display = f"{away_odds:.2f} (No opening data)"
+                    
+                    table_rows.append({
                         'Bookmaker': bookmaker,
-                        'Home': f"{home_odds:.2f}",
-                        'Draw': f"{draw_odds:.2f}",
-                        'Away': f"{away_odds:.2f}",
+                        'Home': home_display,
+                        'Draw': draw_display,
+                        'Away': away_display,
                         'Updated': timestamp
                     })
                 
-                # Display as dataframe
-                st.dataframe(table_data, use_container_width=True, hide_index=True)
+                # Create HTML table for better formatting
+                html_table = "<table style='width: 100%; border-collapse: collapse;'>"
+                html_table += "<thead><tr style='border-bottom: 2px solid rgba(255,255,255,0.2);'>"
+                html_table += "<th style='text-align: left; padding: 8px;'>Bookmaker</th>"
+                html_table += "<th style='text-align: center; padding: 8px;'>Home</th>"
+                html_table += "<th style='text-align: center; padding: 8px;'>Draw</th>"
+                html_table += "<th style='text-align: center; padding: 8px;'>Away</th>"
+                html_table += "<th style='text-align: right; padding: 8px;'>Updated</th>"
+                html_table += "</tr></thead><tbody>"
+                
+                for row_data in table_rows:
+                    html_table += "<tr style='border-bottom: 1px solid rgba(255,255,255,0.1);'>"
+                    html_table += f"<td style='padding: 8px;'><strong>{row_data['Bookmaker']}</strong></td>"
+                    html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Home']}</td>"
+                    html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Draw']}</td>"
+                    html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Away']}</td>"
+                    html_table += f"<td style='padding: 8px; text-align: right;'>{row_data['Updated']}</td>"
+                    html_table += "</tr>"
+                
+                html_table += "</tbody></table>"
+                st.markdown(html_table, unsafe_allow_html=True)
                 
                 # Historical trends
                 history_data = load_odds_history(league, home, away, hours=24)
