@@ -385,7 +385,75 @@ st.markdown("""
         background-color: rgba(255, 255, 255, 0.1) !important;
         border-color: rgba(255, 255, 255, 0.2) !important;
     }
+    
+    /* Sidebar navigation icons styling */
+    .nav-icon {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        vertical-align: middle;
+        opacity: 0.7;
+        flex-shrink: 0;
+    }
+    
+    section[data-testid="stSidebar"] nav a {
+        display: flex !important;
+        align-items: center !important;
+    }
+    
+    section[data-testid="stSidebar"] nav a:hover .nav-icon {
+        opacity: 1;
+    }
     </style>
+    <script>
+    // Add icons to sidebar navigation
+    function addNavIcons() {
+        const sidebar = document.querySelector('section[data-testid="stSidebar"]');
+        if (!sidebar) return;
+        
+        const navLinks = sidebar.querySelectorAll('nav a, [data-testid="stSidebar"] nav a');
+        navLinks.forEach(link => {
+            // Skip if icon already added
+            if (link.querySelector('.nav-icon')) return;
+            
+            const text = link.textContent.trim();
+            const href = link.getAttribute('href') || '';
+            
+            let iconSvg = '';
+            
+            // Dashboard icon (grid/layout)
+            if (text === 'Dashboard' || href === '/' || href === '' || href.includes('dashboard')) {
+                iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>';
+            }
+            // Biggest Movers icon (trending up)
+            else if (text.includes('Biggest Movers') || href.includes('Biggest_Movers') || href.includes('biggest')) {
+                iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>';
+            }
+            
+            if (iconSvg) {
+                const icon = document.createElement('span');
+                icon.className = 'nav-icon';
+                icon.innerHTML = iconSvg;
+                link.insertBefore(icon, link.firstChild);
+            }
+        });
+    }
+    
+    // Run on page load and after navigation
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addNavIcons);
+    } else {
+        addNavIcons();
+    }
+    
+    // Re-run after Streamlit navigation (using MutationObserver)
+    const observer = new MutationObserver(addNavIcons);
+    const sidebar = document.querySelector('section[data-testid="stSidebar"]');
+    if (sidebar) {
+        observer.observe(sidebar, { childList: true, subtree: true });
+    }
+    </script>
 """, unsafe_allow_html=True)
 
 # Header with compact status
