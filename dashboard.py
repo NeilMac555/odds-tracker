@@ -13,19 +13,83 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for branding and segmented control
+# Custom CSS for branding and segmented control with modern typography
 st.markdown("""
     <style>
+    /* Modern typography system */
+    .stApp {
+        font-size: 16px;
+    }
+    
     .main-header {
-        font-size: 2.5rem;
+        font-size: 3rem;
         font-weight: 700;
-        color: #2E5266;
+        color: #ffffff;
         margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
     }
     .sub-header {
-        font-size: 1.2rem;
-        color: #6E8898;
+        font-size: 1.3rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 3rem;
+        font-weight: 400;
+        letter-spacing: -0.01em;
+    }
+    
+    /* Modern expander/card styling */
+    .stExpander {
+        margin-bottom: 16px;
+    }
+    
+    .stExpander summary {
+        padding: 16px 20px !important;
+        border-radius: 14px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background-color: rgba(0, 0, 0, 0.25) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .stExpander summary:hover {
+        background-color: rgba(0, 0, 0, 0.35) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    .stExpander > div {
+        border-radius: 0 0 14px 14px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-top: none !important;
+        background-color: rgba(0, 0, 0, 0.15) !important;
+        padding: 20px 24px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Remove heavy dividers */
+    hr {
+        border: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        margin: 2.5rem 0;
+    }
+    
+    /* Increase spacing between sections */
+    .element-container {
         margin-bottom: 2rem;
+    }
+    
+    /* Modern subheader styling */
+    h3 {
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.01em !important;
+        margin-bottom: 1.5rem !important;
+        margin-top: 2rem !important;
+    }
+    
+    /* Modern table styling */
+    .stDataFrame {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
     }
     
     /* Ensure flag emojis render properly */
