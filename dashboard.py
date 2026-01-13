@@ -629,54 +629,6 @@ else:
     if selected_league is not None:
         filtered_data = [row for row in filtered_data if row[0] == selected_league]
     
-    # Biggest Movers Section (show first)
-    st.subheader("Biggest Movers (Last 24h)")
-    movers = get_biggest_movers()
-    
-    if movers:
-        for i, mover in enumerate(movers):
-            league = mover['league']
-            home = mover['home_team']
-            away = mover['away_team']
-            outcome = mover['outcome']
-            delta_pct = mover['delta_pct']
-            minutes_ago = mover['minutes_ago']
-            
-            # Get league flag
-            league_flag_html = get_league_flag_html(league)
-            league_name = "Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '')
-            
-            # Format delta with sign, color, and arrow
-            # Betting semantics:
-            # - Odds shortened (probability increased) = green up arrow (team more likely)
-            # - Odds drifted (probability decreased) = red down arrow (team less likely)
-            if delta_pct > 0:
-                # Probability increased (odds shortened) - green up arrow
-                delta_sign = "+"
-                delta_color = "#44ff44"  # Green
-                arrow = "▲"
-                delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
-            else:
-                # Probability decreased (odds drifted) - red down arrow
-                delta_sign = "−"
-                delta_color = "#ff4444"  # Red
-                arrow = "▼"
-                delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
-            
-            # Create modern card row
-            row_html = f"""
-            <div class="mover-card">
-                <div class="mover-match">{home} vs {away} ({league_flag_html} {league_name})</div>
-                <div class="mover-details">{outcome} <span style="color: {delta_color}; font-weight: 600; font-size: 1.05em;">{delta_display}</span> · Updated {minutes_ago}m ago</div>
-            </div>
-            """
-            st.markdown(row_html, unsafe_allow_html=True)
-    else:
-        st.info("No movement data available yet.")
-    
-    # Add spacing before match listings
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    
     # Group by date first, then by match
     matches_by_date = {}
     for row in filtered_data:
