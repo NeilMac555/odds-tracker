@@ -267,15 +267,28 @@ def get_odds_direction(history, odds_type):
     else:
         return "—", "gray"
 
+# League to flag emoji mapping
+LEAGUE_FLAGS = {
+    'EPL': '🇬🇧',
+    'Italy Serie A': '🇮🇹',
+    'Spain La Liga': '🇪🇸',
+    'Germany Bundesliga': '🇩🇪',
+    'France Ligue One': '🇫🇷'
+}
+
 # League navigation mapping (database name -> display name with flag)
 LEAGUE_DISPLAY_NAMES = {
     None: '🌍 All Leagues',
-    'EPL': '🇬🇧 Premier League',
-    'Italy Serie A': '🇮🇹 Serie A',
-    'Spain La Liga': '🇪🇸 La Liga',
-    'Germany Bundesliga': '🇩🇪 Bundesliga',
-    'France Ligue One': '🇫🇷 Ligue 1'
+    'EPL': f"{LEAGUE_FLAGS.get('EPL', '')} Premier League",
+    'Italy Serie A': f"{LEAGUE_FLAGS.get('Italy Serie A', '')} Serie A",
+    'Spain La Liga': f"{LEAGUE_FLAGS.get('Spain La Liga', '')} La Liga",
+    'Germany Bundesliga': f"{LEAGUE_FLAGS.get('Germany Bundesliga', '')} Bundesliga",
+    'France Ligue One': f"{LEAGUE_FLAGS.get('France Ligue One', '')} Ligue 1"
 }
+
+def get_league_flag(league):
+    """Get the flag emoji for a league"""
+    return LEAGUE_FLAGS.get(league, '⚽')
 
 # Supported leagues (always show all, even if 0 matches)
 SUPPORTED_LEAGUES = ['EPL', 'Italy Serie A', 'Spain La Liga', 'Germany Bundesliga', 'France Ligue One']
@@ -354,7 +367,8 @@ else:
             st.subheader(f"📅 {match_date.strftime('%A, %B %d, %Y')}")
         
         for (league, home, away), match_data in matches_by_date[match_date].items():
-            with st.expander(f"⚽ {home} vs {away} ({league})", expanded=False):
+            league_flag = get_league_flag(league)
+            with st.expander(f"{league_flag} {home} vs {away} ({league})", expanded=False):
                 
                 # Display odds table
                 st.subheader("Current Odds")
