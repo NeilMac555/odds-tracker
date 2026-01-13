@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for branding
+# Custom CSS for branding and segmented control
 st.markdown("""
     <style>
     .main-header {
@@ -26,6 +26,101 @@ st.markdown("""
         font-size: 1.2rem;
         color: #6E8898;
         margin-bottom: 2rem;
+    }
+    
+    /* Segmented Control Styling */
+    .stRadio > div {
+        display: flex !important;
+        gap: 7px !important;
+        margin-bottom: 16px !important;
+        flex-direction: row !important;
+    }
+    
+    .stRadio > div[role="radiogroup"] {
+        display: flex !important;
+        gap: 7px !important;
+        width: 100% !important;
+    }
+    
+    /* Target all label elements within radio groups */
+    .stRadio > div > label,
+    .stRadio > div[role="radiogroup"] > label,
+    .stRadio label {
+        flex: 1 !important;
+        padding: 9px 15px !important;
+        border-radius: 7px !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        background-color: rgba(0, 0, 0, 0.3) !important;
+        color: rgba(255, 255, 255, 0.6) !important;
+        text-align: center !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        font-weight: 500 !important;
+        position: relative !important;
+        margin-bottom: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 38px !important;
+        box-sizing: border-box !important;
+    }
+    
+    .stRadio > div > label:hover,
+    .stRadio > div[role="radiogroup"] > label:hover,
+    .stRadio label:hover {
+        background-color: rgba(0, 0, 0, 0.4) !important;
+        color: rgba(255, 255, 255, 0.8) !important;
+    }
+    
+    /* Active tab styling - using multiple selectors for compatibility */
+    .stRadio > div > label:has(input[type="radio"]:checked),
+    .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked),
+    .stRadio label:has(input[type="radio"]:checked),
+    .stRadio label[data-baseweb="radio"]:has(input:checked) {
+        background-color: rgba(255, 255, 255, 0.15) !important;
+        color: rgba(255, 255, 255, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.25) !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Active tab underline */
+    .stRadio > div > label:has(input[type="radio"]:checked)::after,
+    .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked)::after,
+    .stRadio label:has(input[type="radio"]:checked)::after {
+        content: '' !important;
+        position: absolute !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 2px !important;
+        background-color: #4ECDC4 !important;
+        border-radius: 0 0 7px 7px !important;
+    }
+    
+    /* Hide default radio button circles but keep functionality */
+    .stRadio input[type="radio"] {
+        position: absolute !important;
+        opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        pointer-events: none !important;
+    }
+    
+    /* Ensure proper spacing */
+    .stRadio {
+        margin-bottom: 8px !important;
+    }
+    
+    /* Style the label text container */
+    .stRadio label > div {
+        width: 100% !important;
+        text-align: center !important;
+    }
+    
+    /* Remove default radio button styling */
+    .stRadio [data-baseweb="radio"] {
+        display: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -224,8 +319,6 @@ else:
                 st.dataframe(table_data, use_container_width=True, hide_index=True)
                 
                 # Historical trends
-                st.subheader("Odds Movement (Last 24h)")
-                
                 history_data = load_odds_history(league, home, away, hours=24)
                 
                 if history_data and len(history_data) >= 2:
@@ -266,8 +359,20 @@ else:
                         away_open = away_vals[0]
                         away_now = away_vals[-1]
                         
-                        # Create tabs for each outcome
-                        tab1, tab2, tab3 = st.tabs(["Home", "Draw", "Away"])
+                        # Create unique key for this match's tab state
+                        match_key = f"{league}_{home}_{away}_tab"
+                        
+                        # Segmented control tabs (placed before subheader)
+                        selected_tab = st.radio(
+                            "Outcome",
+                            ["Home", "Draw", "Away"],
+                            key=match_key,
+                            horizontal=True,
+                            label_visibility="collapsed"
+                        )
+                        
+                        # Chart title
+                        st.subheader("Odds Movement (Last 24h)")
                         
                         # Helper function to create a focused graph for a single outcome
                         def create_focused_graph(timestamps, values, outcome_name, color, open_val, now_val):
@@ -308,20 +413,16 @@ else:
                             
                             return fig
                         
-                        # Home tab
-                        with tab1:
+                        # Display content based on selected tab
+                        if selected_tab == "Home":
                             st.markdown(f"**Open:** {home_open:.2f} • **Now:** {home_now:.2f}")
                             fig_home = create_focused_graph(timestamps, home_vals, 'Home', '#FF6B6B', home_open, home_now)
                             st.plotly_chart(fig_home, use_container_width=True)
-                        
-                        # Draw tab
-                        with tab2:
+                        elif selected_tab == "Draw":
                             st.markdown(f"**Open:** {draw_open:.2f} • **Now:** {draw_now:.2f}")
                             fig_draw = create_focused_graph(timestamps, draw_vals, 'Draw', '#4ECDC4', draw_open, draw_now)
                             st.plotly_chart(fig_draw, use_container_width=True)
-                        
-                        # Away tab
-                        with tab3:
+                        else:  # Away
                             st.markdown(f"**Open:** {away_open:.2f} • **Now:** {away_now:.2f}")
                             fig_away = create_focused_graph(timestamps, away_vals, 'Away', '#95E1D3', away_open, away_now)
                             st.plotly_chart(fig_away, use_container_width=True)
