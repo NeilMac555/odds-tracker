@@ -68,6 +68,41 @@ st.markdown("""
         line-height: 1.45;
     }
     
+    /* Subtle animated arrow indicators */
+    @keyframes gentleMoveUp {
+        0%, 100% {
+            transform: translateY(0);
+            opacity: 0.6;
+        }
+        50% {
+            transform: translateY(-3px);
+            opacity: 0.8;
+        }
+    }
+    
+    @keyframes gentleMoveDown {
+        0%, 100% {
+            transform: translateY(0);
+            opacity: 0.6;
+        }
+        50% {
+            transform: translateY(3px);
+            opacity: 0.8;
+        }
+    }
+    
+    .arrow-shortening {
+        display: inline-block;
+        animation: gentleMoveUp 2.5s ease-in-out infinite;
+        opacity: 0.65;
+    }
+    
+    .arrow-drifting {
+        display: inline-block;
+        animation: gentleMoveDown 2.5s ease-in-out infinite;
+        opacity: 0.65;
+    }
+    
     /* Remove heavy dividers */
     hr {
         border: none;
@@ -268,23 +303,25 @@ if movers:
         # - Odds decreased (e.g., 2.20 → 1.90): "Odds shortening" with green text and down arrow (↓)
         # - Odds increased (e.g., 2.10 → 2.30): "Odds drifting" with red text and up arrow (↑)
         if latest_odds < opening_odds:
-            # Odds decreased (shortening) - green text, down arrow
+            # Odds decreased (shortening) - green text, down arrow with gentle upward animation
             status_text = "Odds shortening"
             status_color = "#44ff44"  # Green
             arrow = "↓"
+            arrow_class = "arrow-shortening"
             odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
         else:
-            # Odds increased (drifting) - red text, up arrow
+            # Odds increased (drifting) - red text, up arrow with gentle downward animation
             status_text = "Odds drifting"
             status_color = "#ff4444"  # Red
             arrow = "↑"
+            arrow_class = "arrow-drifting"
             odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
         
         # Create modern card row
         row_html = f"""
         <div class="mover-card">
             <div class="mover-match">{home} vs {away} ({league_flag_html} {league_name})</div>
-            <div class="mover-details">{outcome} · <span style="color: {status_color}; font-weight: 600; font-size: 1.05em;">{arrow} {status_text} ({odds_display})</span> · Updated {minutes_ago}m ago</div>
+            <div class="mover-details">{outcome} · <span style="color: {status_color}; font-weight: 600; font-size: 1.05em;"><span class="{arrow_class}">{arrow}</span> {status_text} ({odds_display})</span> · Updated {minutes_ago}m ago</div>
         </div>
         """
         st.markdown(row_html, unsafe_allow_html=True)
