@@ -28,43 +28,48 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* Segmented Control Styling - Only for main content area, not sidebar */
-    /* Exclude sidebar explicitly - reset any custom styling */
+    /* Segmented Control Styling - ONLY for Home/Draw/Away tabs inside expanders */
+    /* Completely exclude sidebar - use very specific selectors */
     section[data-testid="stSidebar"] .stRadio,
-    [data-testid="stSidebar"] .stRadio {
+    [data-testid="stSidebar"] .stRadio,
+    .css-1d391kg .stRadio {
+        all: unset !important;
+        display: block !important;
+    }
+    
+    section[data-testid="stSidebar"] .stRadio > div,
+    [data-testid="stSidebar"] .stRadio > div,
+    .css-1d391kg .stRadio > div {
         all: revert !important;
     }
     
-    section[data-testid="stSidebar"] .stRadio *,
-    [data-testid="stSidebar"] .stRadio * {
+    section[data-testid="stSidebar"] .stRadio label,
+    [data-testid="stSidebar"] .stRadio label,
+    .css-1d391kg .stRadio label {
         all: revert !important;
     }
     
-    /* Target radio buttons in main content only (inside expanders/block containers) */
-    .element-container .stRadio > div,
-    .stExpander .stRadio > div {
+    /* Target ONLY radio buttons inside expander content (where Home/Draw/Away tabs are) */
+    .stExpander .element-container .stRadio > div {
         display: flex !important;
-        gap: 7px !important;
-        margin-bottom: 16px !important;
+        gap: 6px !important;
+        margin-bottom: 12px !important;
         flex-direction: row !important;
     }
     
-    .element-container .stRadio > div[role="radiogroup"],
-    .stExpander .stRadio > div[role="radiogroup"] {
+    .stExpander .element-container .stRadio > div[role="radiogroup"] {
         display: flex !important;
-        gap: 7px !important;
+        gap: 6px !important;
         width: 100% !important;
         flex-direction: row !important;
     }
     
-    /* Target labels in main content only - exclude sidebar */
-    .element-container .stRadio > div > label,
-    .element-container .stRadio > div[role="radiogroup"] > label,
-    .stExpander .stRadio > div > label,
-    .stExpander .stRadio > div[role="radiogroup"] > label {
+    /* Compact tab styling - only in expanders */
+    .stExpander .element-container .stRadio > div > label,
+    .stExpander .element-container .stRadio > div[role="radiogroup"] > label {
         flex: 1 !important;
-        padding: 9px 15px !important;
-        border-radius: 7px !important;
+        padding: 6px 12px !important;
+        border-radius: 6px !important;
         border: 1px solid rgba(255, 255, 255, 0.15) !important;
         background-color: rgba(0, 0, 0, 0.3) !important;
         color: rgba(255, 255, 255, 0.6) !important;
@@ -78,36 +83,29 @@ st.markdown("""
         flex-direction: row !important;
         align-items: center !important;
         justify-content: center !important;
-        min-height: 38px !important;
+        min-height: 32px !important;
         box-sizing: border-box !important;
-        writing-mode: horizontal-tb !important;
-        text-orientation: mixed !important;
+        font-size: 0.9rem !important;
     }
     
-    .element-container .stRadio > div > label:hover,
-    .element-container .stRadio > div[role="radiogroup"] > label:hover,
-    .stExpander .stRadio > div > label:hover,
-    .stExpander .stRadio > div[role="radiogroup"] > label:hover {
+    .stExpander .element-container .stRadio > div > label:hover,
+    .stExpander .element-container .stRadio > div[role="radiogroup"] > label:hover {
         background-color: rgba(0, 0, 0, 0.4) !important;
         color: rgba(255, 255, 255, 0.8) !important;
     }
     
-    /* Active tab styling - main content only */
-    .element-container .stRadio > div > label:has(input[type="radio"]:checked),
-    .element-container .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked),
-    .stExpander .stRadio > div > label:has(input[type="radio"]:checked),
-    .stExpander .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked) {
+    /* Active tab styling - only in expanders */
+    .stExpander .element-container .stRadio > div > label:has(input[type="radio"]:checked),
+    .stExpander .element-container .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked) {
         background-color: rgba(255, 255, 255, 0.15) !important;
         color: rgba(255, 255, 255, 0.95) !important;
         border-color: rgba(255, 255, 255, 0.25) !important;
         font-weight: 600 !important;
     }
     
-    /* Active tab underline - main content only */
-    .element-container .stRadio > div > label:has(input[type="radio"]:checked)::after,
-    .element-container .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked)::after,
-    .stExpander .stRadio > div > label:has(input[type="radio"]:checked)::after,
-    .stExpander .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked)::after {
+    /* Active tab underline - only in expanders */
+    .stExpander .element-container .stRadio > div > label:has(input[type="radio"]:checked)::after,
+    .stExpander .element-container .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked)::after {
         content: '' !important;
         position: absolute !important;
         bottom: 0 !important;
@@ -115,12 +113,11 @@ st.markdown("""
         right: 0 !important;
         height: 2px !important;
         background-color: #4ECDC4 !important;
-        border-radius: 0 0 7px 7px !important;
+        border-radius: 0 0 6px 6px !important;
     }
     
-    /* Hide default radio button circles but keep functionality - main content only */
-    .element-container .stRadio input[type="radio"],
-    .stExpander .stRadio input[type="radio"] {
+    /* Hide default radio button circles - only in expanders */
+    .stExpander .element-container .stRadio input[type="radio"] {
         position: absolute !important;
         opacity: 0 !important;
         width: 0 !important;
@@ -129,32 +126,15 @@ st.markdown("""
         pointer-events: none !important;
     }
     
-    /* Ensure proper spacing - main content only */
-    .element-container .stRadio,
-    .stExpander .stRadio {
+    /* Ensure proper spacing - only in expanders */
+    .stExpander .element-container .stRadio {
         margin-bottom: 8px !important;
     }
     
-    /* Style the label text container - ensure horizontal text */
-    .element-container .stRadio label > div,
-    .stExpander .stRadio label > div {
+    /* Style the label text container - only in expanders */
+    .stExpander .element-container .stRadio label > div {
         width: 100% !important;
         text-align: center !important;
-        writing-mode: horizontal-tb !important;
-        text-orientation: mixed !important;
-    }
-    
-    /* Ensure text inside labels is horizontal */
-    .element-container .stRadio label,
-    .stExpander .stRadio label {
-        writing-mode: horizontal-tb !important;
-        text-orientation: mixed !important;
-    }
-    
-    /* Remove default radio button styling - main content only */
-    .element-container .stRadio [data-baseweb="radio"],
-    .stExpander .stRadio [data-baseweb="radio"] {
-        display: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
