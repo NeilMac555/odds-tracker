@@ -369,21 +369,83 @@ st.markdown("""
         text-align: center !important;
     }
     
-    /* Style league selection buttons in sidebar */
+    /* Reduce sidebar width */
+    section[data-testid="stSidebar"] {
+        min-width: 18rem !important;
+        max-width: 18rem !important;
+    }
+    
+    /* Make sidebar feel secondary - reduce overall visual weight */
+    section[data-testid="stSidebar"] {
+        background-color: rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /* Lower contrast for sidebar headings */
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] .stMarkdown h3 {
+        color: rgba(255, 255, 255, 0.5) !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Lower contrast for inactive navigation items */
+    section[data-testid="stSidebar"] nav a {
+        color: rgba(255, 255, 255, 0.4) !important;
+        opacity: 0.7 !important;
+    }
+    
+    section[data-testid="stSidebar"] nav a:hover {
+        color: rgba(255, 255, 255, 0.6) !important;
+        opacity: 0.85 !important;
+    }
+    
+    /* Keep active navigation item clearly highlighted */
+    section[data-testid="stSidebar"] nav a[aria-current="page"],
+    section[data-testid="stSidebar"] nav a[class*="active"],
+    section[data-testid="stSidebar"] nav a:has([data-baseweb="base-select"]),
+    section[data-testid="stSidebar"] nav a[href]:focus {
+        color: rgba(255, 255, 255, 0.95) !important;
+        opacity: 1 !important;
+        font-weight: 600 !important;
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        border-radius: 4px !important;
+    }
+    
+    /* Lower contrast for sidebar text content */
+    section[data-testid="stSidebar"] .stMarkdown,
+    section[data-testid="stSidebar"] p {
+        color: rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    /* Style league selection buttons in sidebar - lower contrast */
     .stSidebar button[kind="secondary"] {
         width: 100% !important;
         text-align: left !important;
         padding: 8px 12px !important;
         margin-bottom: 4px !important;
         border-radius: 4px !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        background-color: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background-color: rgba(0, 0, 0, 0.15) !important;
+        color: rgba(255, 255, 255, 0.5) !important;
         transition: all 0.2s ease !important;
     }
     
     .stSidebar button[kind="secondary"]:hover {
-        background-color: rgba(255, 255, 255, 0.1) !important;
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+    
+    /* Keep primary (active) button prominent */
+    .stSidebar button[kind="primary"] {
+        background-color: rgba(255, 255, 255, 0.12) !important;
+        color: rgba(255, 255, 255, 0.95) !important;
         border-color: rgba(255, 255, 255, 0.2) !important;
+        font-weight: 600 !important;
+    }
+    
+    .stSidebar button[kind="primary"]:hover {
+        background-color: rgba(255, 255, 255, 0.18) !important;
+        border-color: rgba(255, 255, 255, 0.25) !important;
     }
     
     /* Sidebar navigation icons styling */
