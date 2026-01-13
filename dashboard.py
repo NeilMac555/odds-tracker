@@ -1194,8 +1194,15 @@ else:
                     else:
                         st.info("Not enough historical data yet. Check back after a few updates.")
     
-    # Auto-refresh toggle - removed (was in sidebar, now hidden)
-    auto_refresh = False
+    # Auto-refresh toggle
+    st.sidebar.markdown("<br>", unsafe_allow_html=True)
+    auto_refresh = st.sidebar.checkbox("Auto-refresh (60s)", value=False)
+    
+    if auto_refresh:
+        st.sidebar.info("Page will refresh every 60 seconds")
+        import time
+        time.sleep(60)
+        st.rerun()
 
 # Footer
 st.markdown("---")
