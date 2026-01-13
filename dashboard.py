@@ -275,17 +275,7 @@ def get_odds_direction(history, odds_type):
     else:
         return "—", "gray"
 
-# League to flag emoji mapping (using direct Unicode for better browser compatibility)
-# Flag emojis are regional indicator symbols that combine to form flags
-LEAGUE_FLAGS = {
-    'EPL': '🇬🇧',  # GB flag
-    'Italy Serie A': '🇮🇹',  # IT flag
-    'Spain La Liga': '🇪🇸',  # ES flag
-    'Germany Bundesliga': '🇩🇪',  # DE flag
-    'France Ligue One': '🇫🇷'  # FR flag
-}
-
-# Alternative: Country code mapping if flags don't render
+# League to country code mapping for flag images
 LEAGUE_COUNTRY_CODES = {
     'EPL': 'GB',
     'Italy Serie A': 'IT',
@@ -294,22 +284,29 @@ LEAGUE_COUNTRY_CODES = {
     'France Ligue One': 'FR'
 }
 
+def get_league_flag_html(league):
+    """Get flag as HTML img tag using CDN"""
+    country_code = LEAGUE_COUNTRY_CODES.get(league, '')
+    if country_code:
+        # Using flagcdn.com CDN for reliable flag images
+        flag_url = f"https://flagcdn.com/w20/{country_code.lower()}.png"
+        return f'<img src="{flag_url}" alt="{country_code}" style="width: 20px; height: 15px; vertical-align: middle; margin-right: 4px; border: 1px solid rgba(255,255,255,0.2);">'
+    return '⚽'  # Fallback to soccer ball emoji
+
 # League navigation mapping (database name -> display name with flag)
+# Using HTML img tags for flags in sidebar
 LEAGUE_DISPLAY_NAMES = {
     None: '🌍 All Leagues',
-    'EPL': f"{LEAGUE_FLAGS.get('EPL', '')} Premier League",
-    'Italy Serie A': f"{LEAGUE_FLAGS.get('Italy Serie A', '')} Serie A",
-    'Spain La Liga': f"{LEAGUE_FLAGS.get('Spain La Liga', '')} La Liga",
-    'Germany Bundesliga': f"{LEAGUE_FLAGS.get('Germany Bundesliga', '')} Bundesliga",
-    'France Ligue One': f"{LEAGUE_FLAGS.get('France Ligue One', '')} Ligue 1"
+    'EPL': f"{get_league_flag_html('EPL')} Premier League",
+    'Italy Serie A': f"{get_league_flag_html('Italy Serie A')} Serie A",
+    'Spain La Liga': f"{get_league_flag_html('Spain La Liga')} La Liga",
+    'Germany Bundesliga': f"{get_league_flag_html('Germany Bundesliga')} Bundesliga",
+    'France Ligue One': f"{get_league_flag_html('France Ligue One')} Ligue 1"
 }
 
 def get_league_flag(league):
-    """Get the flag emoji for a league, with fallback to country code"""
-    flag = LEAGUE_FLAGS.get(league, '⚽')
-    # If flag doesn't render properly, it might show as [XX], so we'll use HTML span
-    # to ensure proper rendering
-    return flag
+    """Get flag HTML for a league (for use in markdown)"""
+    return get_league_flag_html(league)
 
 # Supported leagues (always show all, even if 0 matches)
 SUPPORTED_LEAGUES = ['EPL', 'Italy Serie A', 'Spain La Liga', 'Germany Bundesliga', 'France Ligue One']
@@ -318,13 +315,29 @@ SUPPORTED_LEAGUES = ['EPL', 'Italy Serie A', 'Spain La Liga', 'Germany Bundeslig
 odds_data = load_latest_odds()
 
 # League navigation in sidebar
+
+# Create league options for radio button with flag images
+# We'll create custom display with flags using markdown, then use radio for selection
 st.sidebar.markdown("### Leagues")
 
-# Create league options for radio button
-league_options = [LEAGUE_DISPLAY_NAMES[None]] + [LEAGUE_DISPLAY_NAMES[league] for league in SUPPORTED_LEAGUES]
+# Display league options with flags
+league_display_map = {}
+for i, league in enumerate([None] + SUPPORTED_LEAGUES):
+    if league is None:
+        display_text = "🌍 All Leagues"
+        league_display_map[display_text] = None
+        st.sidebar.markdown(f"**{display_text}**")
+    else:
+        flag_html = get_league_flag_html(league)
+        league_name = "Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '')
+        display_text = f"{league_name}"
+        league_display_map[display_text] = league
+        st.sidebar.markdown(f"{flag_html} **{display_text}**", unsafe_allow_html=True)
+
+# Use radio button for league selection (with plain text options)
+league_options = ['🌍 All Leagues'] + [f"Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '') for league in SUPPORTED_LEAGUES]
 league_values = [None] + SUPPORTED_LEAGUES
 
-# Use radio button for league selection
 selected_league_display = st.sidebar.radio(
     "Select League",
     options=league_options,
@@ -388,203 +401,205 @@ else:
             st.subheader(f"📅 {match_date.strftime('%A, %B %d, %Y')}")
         
         for (league, home, away), match_data in matches_by_date[match_date].items():
-            league_flag = get_league_flag(league)
-            # Use flag emoji directly - Streamlit should handle it
-            match_title = f"{league_flag} {home} vs {away} ({league})"
-            with st.expander(match_title, expanded=False):
-                
-                # Display odds table
-                st.subheader("Current Odds")
-                
-                # Get opening odds for comparison
-                league, home, away = match_data[0][0], match_data[0][1], match_data[0][2]
-                
-                # Create table with opening odds comparison
-                table_rows = []
-                for row in match_data:
-                    bookmaker = row[3]
-                    home_odds = row[4]
-                    draw_odds = row[6]
-                    away_odds = row[5]
-                    timestamp = row[7].strftime('%H:%M:%S')
+            league_flag_html = get_league_flag(league)
+            # Create a container with flag and expander
+            flag_col, expander_col = st.columns([0.05, 0.95])
+            with flag_col:
+                st.markdown(league_flag_html, unsafe_allow_html=True)
+            with expander_col:
+                with st.expander(f"{home} vs {away} ({league})", expanded=False):
+                    # Display odds table
+                    st.subheader("Current Odds")
                     
-                    # Get opening odds for this bookmaker
-                    opening = get_opening_odds(league, home, away, bookmaker)
+                    # Get opening odds for comparison
+                    league, home, away = match_data[0][0], match_data[0][1], match_data[0][2]
                     
-                    # Format Home odds with change indicator
-                    if opening:
-                        home_change, home_arrow, home_color = calculate_odds_change(opening['home_odds'], home_odds)
-                        if home_change is not None and home_change > 0:
-                            arrow_color = "#00ff00" if home_color == "green" else "#ff0000"
-                            home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} <span style='color: {arrow_color}; font-weight: bold;'>{home_arrow} {home_change:.1f}%</span>"
+                    # Create table with opening odds comparison
+                    table_rows = []
+                    for row in match_data:
+                        bookmaker = row[3]
+                        home_odds = row[4]
+                        draw_odds = row[6]
+                        away_odds = row[5]
+                        timestamp = row[7].strftime('%H:%M:%S')
+                        
+                        # Get opening odds for this bookmaker
+                        opening = get_opening_odds(league, home, away, bookmaker)
+                        
+                        # Format Home odds with change indicator
+                        if opening:
+                            home_change, home_arrow, home_color = calculate_odds_change(opening['home_odds'], home_odds)
+                            if home_change is not None and home_change > 0:
+                                arrow_color = "#00ff00" if home_color == "green" else "#ff0000"
+                                home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} <span style='color: {arrow_color}; font-weight: bold;'>{home_arrow} {home_change:.1f}%</span>"
+                            else:
+                                home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} (— 0.0%)"
                         else:
-                            home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} (— 0.0%)"
-                    else:
-                        home_display = f"{home_odds:.2f} (No opening data)"
-                    
-                    # Format Draw odds with change indicator
-                    if opening:
-                        draw_change, draw_arrow, draw_color = calculate_odds_change(opening['draw_odds'], draw_odds)
-                        if draw_change is not None and draw_change > 0:
-                            arrow_color = "#00ff00" if draw_color == "green" else "#ff0000"
-                            draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} <span style='color: {arrow_color}; font-weight: bold;'>{draw_arrow} {draw_change:.1f}%</span>"
+                            home_display = f"{home_odds:.2f} (No opening data)"
+                        
+                        # Format Draw odds with change indicator
+                        if opening:
+                            draw_change, draw_arrow, draw_color = calculate_odds_change(opening['draw_odds'], draw_odds)
+                            if draw_change is not None and draw_change > 0:
+                                arrow_color = "#00ff00" if draw_color == "green" else "#ff0000"
+                                draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} <span style='color: {arrow_color}; font-weight: bold;'>{draw_arrow} {draw_change:.1f}%</span>"
+                            else:
+                                draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} (— 0.0%)"
                         else:
-                            draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} (— 0.0%)"
-                    else:
-                        draw_display = f"{draw_odds:.2f} (No opening data)"
-                    
-                    # Format Away odds with change indicator
-                    if opening:
-                        away_change, away_arrow, away_color = calculate_odds_change(opening['away_odds'], away_odds)
-                        if away_change is not None and away_change > 0:
-                            arrow_color = "#00ff00" if away_color == "green" else "#ff0000"
-                            away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} <span style='color: {arrow_color}; font-weight: bold;'>{away_arrow} {away_change:.1f}%</span>"
+                            draw_display = f"{draw_odds:.2f} (No opening data)"
+                        
+                        # Format Away odds with change indicator
+                        if opening:
+                            away_change, away_arrow, away_color = calculate_odds_change(opening['away_odds'], away_odds)
+                            if away_change is not None and away_change > 0:
+                                arrow_color = "#00ff00" if away_color == "green" else "#ff0000"
+                                away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} <span style='color: {arrow_color}; font-weight: bold;'>{away_arrow} {away_change:.1f}%</span>"
+                            else:
+                                away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} (— 0.0%)"
                         else:
-                            away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} (— 0.0%)"
-                    else:
-                        away_display = f"{away_odds:.2f} (No opening data)"
-                    
-                    table_rows.append({
-                        'Bookmaker': bookmaker,
-                        'Home': home_display,
-                        'Draw': draw_display,
-                        'Away': away_display,
-                        'Updated': timestamp
-                    })
-                
-                # Create HTML table for better formatting
-                html_table = "<table style='width: 100%; border-collapse: collapse;'>"
-                html_table += "<thead><tr style='border-bottom: 2px solid rgba(255,255,255,0.2);'>"
-                html_table += "<th style='text-align: left; padding: 8px;'>Bookmaker</th>"
-                html_table += "<th style='text-align: center; padding: 8px;'>Home</th>"
-                html_table += "<th style='text-align: center; padding: 8px;'>Draw</th>"
-                html_table += "<th style='text-align: center; padding: 8px;'>Away</th>"
-                html_table += "<th style='text-align: right; padding: 8px;'>Updated</th>"
-                html_table += "</tr></thead><tbody>"
-                
-                for row_data in table_rows:
-                    html_table += "<tr style='border-bottom: 1px solid rgba(255,255,255,0.1);'>"
-                    html_table += f"<td style='padding: 8px;'><strong>{row_data['Bookmaker']}</strong></td>"
-                    html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Home']}</td>"
-                    html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Draw']}</td>"
-                    html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Away']}</td>"
-                    html_table += f"<td style='padding: 8px; text-align: right;'>{row_data['Updated']}</td>"
-                    html_table += "</tr>"
-                
-                html_table += "</tbody></table>"
-                st.markdown(html_table, unsafe_allow_html=True)
-                
-                # Historical trends
-                history_data = load_odds_history(league, home, away, hours=24)
-                
-                if history_data and len(history_data) >= 2:
-                    # Since we only track Pinnacle, get all data and sort by timestamp
-                    history = []
-                    for row in history_data:
-                        history.append({
-                            'timestamp': row[4],
-                            'home_odds': row[1],
-                            'draw_odds': row[3],
-                            'away_odds': row[2]
+                            away_display = f"{away_odds:.2f} (No opening data)"
+                        
+                        table_rows.append({
+                            'Bookmaker': bookmaker,
+                            'Home': home_display,
+                            'Draw': draw_display,
+                            'Away': away_display,
+                            'Updated': timestamp
                         })
                     
-                    # Sort by timestamp to ensure chronological order
-                    history.sort(key=lambda x: x['timestamp'])
+                    # Create HTML table for better formatting
+                    html_table = "<table style='width: 100%; border-collapse: collapse;'>"
+                    html_table += "<thead><tr style='border-bottom: 2px solid rgba(255,255,255,0.2);'>"
+                    html_table += "<th style='text-align: left; padding: 8px;'>Bookmaker</th>"
+                    html_table += "<th style='text-align: center; padding: 8px;'>Home</th>"
+                    html_table += "<th style='text-align: center; padding: 8px;'>Draw</th>"
+                    html_table += "<th style='text-align: center; padding: 8px;'>Away</th>"
+                    html_table += "<th style='text-align: right; padding: 8px;'>Updated</th>"
+                    html_table += "</tr></thead><tbody>"
                     
-                    # Remove duplicates - keep only latest entry for each timestamp
-                    seen_timestamps = set()
-                    unique_history = []
-                    for h in reversed(history):  # Start from newest
-                        if h['timestamp'] not in seen_timestamps:
-                            seen_timestamps.add(h['timestamp'])
-                            unique_history.append(h)
-                    unique_history.reverse()  # Back to chronological order
+                    for row_data in table_rows:
+                        html_table += "<tr style='border-bottom: 1px solid rgba(255,255,255,0.1);'>"
+                        html_table += f"<td style='padding: 8px;'><strong>{row_data['Bookmaker']}</strong></td>"
+                        html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Home']}</td>"
+                        html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Draw']}</td>"
+                        html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Away']}</td>"
+                        html_table += f"<td style='padding: 8px; text-align: right;'>{row_data['Updated']}</td>"
+                        html_table += "</tr>"
                     
-                    if len(unique_history) >= 2:
-                        # Create dataframe with proper datetime index
-                        timestamps = [h['timestamp'] for h in unique_history]
-                        home_vals = [float(h['home_odds']) for h in unique_history]
-                        draw_vals = [float(h['draw_odds']) for h in unique_history]
-                        away_vals = [float(h['away_odds']) for h in unique_history]
+                    html_table += "</tbody></table>"
+                    st.markdown(html_table, unsafe_allow_html=True)
+                    
+                    # Historical trends
+                    history_data = load_odds_history(league, home, away, hours=24)
+                
+                    if history_data and len(history_data) >= 2:
+                        # Since we only track Pinnacle, get all data and sort by timestamp
+                        history = []
+                        for row in history_data:
+                            history.append({
+                                'timestamp': row[4],
+                                'home_odds': row[1],
+                                'draw_odds': row[3],
+                                'away_odds': row[2]
+                            })
                         
-                        # Get opening and current values for each outcome
-                        home_open = home_vals[0]
-                        home_now = home_vals[-1]
-                        draw_open = draw_vals[0]
-                        draw_now = draw_vals[-1]
-                        away_open = away_vals[0]
-                        away_now = away_vals[-1]
+                        # Sort by timestamp to ensure chronological order
+                        history.sort(key=lambda x: x['timestamp'])
                         
-                        # Create unique key for this match's tab state
-                        match_key = f"{league}_{home}_{away}_tab"
+                        # Remove duplicates - keep only latest entry for each timestamp
+                        seen_timestamps = set()
+                        unique_history = []
+                        for h in reversed(history):  # Start from newest
+                            if h['timestamp'] not in seen_timestamps:
+                                seen_timestamps.add(h['timestamp'])
+                                unique_history.append(h)
+                        unique_history.reverse()  # Back to chronological order
                         
-                        # Segmented control tabs (placed before subheader)
-                        selected_tab = st.radio(
-                            "Outcome",
-                            ["Home", "Draw", "Away"],
-                            key=match_key,
-                            horizontal=True,
-                            label_visibility="collapsed"
-                        )
-                        
-                        # Chart title
-                        st.subheader("Odds Movement (Last 24h)")
-                        
-                        # Helper function to create a focused graph for a single outcome
-                        def create_focused_graph(timestamps, values, outcome_name, color, open_val, now_val):
-                            # Calculate Y-axis range based on this outcome's data with padding
-                            if values:
-                                y_min = min(values)
-                                y_max = max(values)
-                                # Add 5% padding above and below for better visualization
-                                padding = (y_max - y_min) * 0.05
-                                if padding == 0:  # If all values are the same, add small fixed padding
-                                    padding = y_min * 0.01 if y_min > 0 else 0.1
-                                y_range = [max(0, y_min - padding), y_max + padding]
-                            else:
-                                y_range = None
+                        if len(unique_history) >= 2:
+                            # Create dataframe with proper datetime index
+                            timestamps = [h['timestamp'] for h in unique_history]
+                            home_vals = [float(h['home_odds']) for h in unique_history]
+                            draw_vals = [float(h['draw_odds']) for h in unique_history]
+                            away_vals = [float(h['away_odds']) for h in unique_history]
                             
-                            # Create Plotly figure with focused Y-axis range
-                            fig = go.Figure()
-                            fig.add_trace(go.Scatter(
-                                x=timestamps,
-                                y=values,
-                                mode='lines+markers',
-                                name=outcome_name,
-                                line=dict(color=color, width=2),
-                                marker=dict(size=4)
-                            ))
+                            # Get opening and current values for each outcome
+                            home_open = home_vals[0]
+                            home_now = home_vals[-1]
+                            draw_open = draw_vals[0]
+                            draw_now = draw_vals[-1]
+                            away_open = away_vals[0]
+                            away_now = away_vals[-1]
                             
-                            # Update layout with custom Y-axis range
-                            fig.update_layout(
-                                height=400,
-                                xaxis_title="Time",
-                                yaxis_title="Odds",
-                                yaxis=dict(range=y_range) if y_range else {},
-                                hovermode='x unified',
-                                plot_bgcolor='rgba(0,0,0,0)',
-                                paper_bgcolor='rgba(0,0,0,0)',
-                                font=dict(color='white')
+                            # Create unique key for this match's tab state
+                            match_key = f"{league}_{home}_{away}_tab"
+                            
+                            # Segmented control tabs (placed before subheader)
+                            selected_tab = st.radio(
+                                "Outcome",
+                                ["Home", "Draw", "Away"],
+                                key=match_key,
+                                horizontal=True,
+                                label_visibility="collapsed"
                             )
                             
-                            return fig
-                        
-                        # Display content based on selected tab
-                        if selected_tab == "Home":
-                            st.markdown(f"**Open:** {home_open:.2f} • **Now:** {home_now:.2f}")
-                            fig_home = create_focused_graph(timestamps, home_vals, 'Home', '#FF6B6B', home_open, home_now)
-                            st.plotly_chart(fig_home, use_container_width=True)
-                        elif selected_tab == "Draw":
-                            st.markdown(f"**Open:** {draw_open:.2f} • **Now:** {draw_now:.2f}")
-                            fig_draw = create_focused_graph(timestamps, draw_vals, 'Draw', '#4ECDC4', draw_open, draw_now)
-                            st.plotly_chart(fig_draw, use_container_width=True)
-                        else:  # Away
-                            st.markdown(f"**Open:** {away_open:.2f} • **Now:** {away_now:.2f}")
-                            fig_away = create_focused_graph(timestamps, away_vals, 'Away', '#95E1D3', away_open, away_now)
-                            st.plotly_chart(fig_away, use_container_width=True)
+                            # Chart title
+                            st.subheader("Odds Movement (Last 24h)")
                             
-                else:
-                    st.info("Not enough historical data yet. Check back after a few updates.")
+                            # Helper function to create a focused graph for a single outcome
+                            def create_focused_graph(timestamps, values, outcome_name, color, open_val, now_val):
+                                # Calculate Y-axis range based on this outcome's data with padding
+                                if values:
+                                    y_min = min(values)
+                                    y_max = max(values)
+                                    # Add 5% padding above and below for better visualization
+                                    padding = (y_max - y_min) * 0.05
+                                    if padding == 0:  # If all values are the same, add small fixed padding
+                                        padding = y_min * 0.01 if y_min > 0 else 0.1
+                                    y_range = [max(0, y_min - padding), y_max + padding]
+                                else:
+                                    y_range = None
+                                
+                                # Create Plotly figure with focused Y-axis range
+                                fig = go.Figure()
+                                fig.add_trace(go.Scatter(
+                                    x=timestamps,
+                                    y=values,
+                                    mode='lines+markers',
+                                    name=outcome_name,
+                                    line=dict(color=color, width=2),
+                                    marker=dict(size=4)
+                                ))
+                                
+                                # Update layout with custom Y-axis range
+                                fig.update_layout(
+                                    height=400,
+                                    xaxis_title="Time",
+                                    yaxis_title="Odds",
+                                    yaxis=dict(range=y_range) if y_range else {},
+                                    hovermode='x unified',
+                                    plot_bgcolor='rgba(0,0,0,0)',
+                                    paper_bgcolor='rgba(0,0,0,0)',
+                                    font=dict(color='white')
+                                )
+                                
+                                return fig
+                            
+                            # Display content based on selected tab
+                            if selected_tab == "Home":
+                                st.markdown(f"**Open:** {home_open:.2f} • **Now:** {home_now:.2f}")
+                                fig_home = create_focused_graph(timestamps, home_vals, 'Home', '#FF6B6B', home_open, home_now)
+                                st.plotly_chart(fig_home, use_container_width=True)
+                            elif selected_tab == "Draw":
+                                st.markdown(f"**Open:** {draw_open:.2f} • **Now:** {draw_now:.2f}")
+                                fig_draw = create_focused_graph(timestamps, draw_vals, 'Draw', '#4ECDC4', draw_open, draw_now)
+                                st.plotly_chart(fig_draw, use_container_width=True)
+                            else:  # Away
+                                st.markdown(f"**Open:** {away_open:.2f} • **Now:** {away_now:.2f}")
+                                fig_away = create_focused_graph(timestamps, away_vals, 'Away', '#95E1D3', away_open, away_now)
+                                st.plotly_chart(fig_away, use_container_width=True)
+                                
+                    else:
+                        st.info("Not enough historical data yet. Check back after a few updates.")
     
     # Auto-refresh toggle
     st.sidebar.markdown("---")
