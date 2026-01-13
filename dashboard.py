@@ -535,9 +535,19 @@ else:
             league_flag_html = get_league_flag(league)
             league_name = "Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '')
             
-            # Format delta with sign
-            delta_sign = "−" if delta_pct < 0 else "+"
-            delta_display = f"{delta_sign}{abs(delta_pct):.2f}%"
+            # Format delta with sign, color, and arrow
+            if delta_pct > 0:
+                # Positive delta (probability increased) - red
+                delta_sign = "+"
+                delta_color = "#ff4444"  # Red
+                arrow = "↑"
+                delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
+            else:
+                # Negative delta (probability decreased) - green
+                delta_sign = "−"
+                delta_color = "#44ff44"  # Green
+                arrow = "↓"
+                delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
             
             # Create clickable row
             match_id = f"match_{league}_{home}_{away}".replace(" ", "_").replace(".", "")
@@ -547,7 +557,7 @@ else:
                  onmouseout="this.style.backgroundColor='rgba(0,0,0,0.2)'"
                  onclick="document.getElementById('{match_id}').scrollIntoView({{behavior: 'smooth', block: 'center'}});">
                 <strong>{home} vs {away}</strong> ({league_flag_html} {league_name})<br>
-                <span style="color: rgba(255,255,255,0.7); font-size: 0.9em;">{outcome} {delta_display} · Updated {minutes_ago}m ago</span>
+                <span style="color: rgba(255,255,255,0.7); font-size: 0.9em;">{outcome} <span style="color: {delta_color}; font-weight: bold;">{delta_display}</span> · Updated {minutes_ago}m ago</span>
             </div>
             """
             st.markdown(row_html, unsafe_allow_html=True)
