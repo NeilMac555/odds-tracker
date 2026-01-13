@@ -397,37 +397,88 @@ st.markdown("""
         flex-shrink: 0;
     }
     
-    section[data-testid="stSidebar"] nav a {
+    section[data-testid="stSidebar"] nav a,
+    section[data-testid="stSidebar"] a[href] {
         display: flex !important;
         align-items: center !important;
     }
     
-    section[data-testid="stSidebar"] nav a:hover .nav-icon {
+    section[data-testid="stSidebar"] nav a:hover .nav-icon,
+    section[data-testid="stSidebar"] a:hover .nav-icon {
         opacity: 1;
+    }
+    
+    /* CSS fallback for Dashboard icon using ::before */
+    section[data-testid="stSidebar"] nav a[href="/"]::before,
+    section[data-testid="stSidebar"] nav a[href=""]::before {
+        content: '';
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        vertical-align: middle;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.7)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='7'/%3E%3Crect x='14' y='3' width='7' height='7'/%3E%3Crect x='14' y='14' width='7' height='7'/%3E%3Crect x='3' y='14' width='7' height='7'/%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        opacity: 0.7;
+        flex-shrink: 0;
+    }
+    
+    /* CSS fallback for Biggest Movers icon */
+    section[data-testid="stSidebar"] nav a[href*="Biggest_Movers"]::before,
+    section[data-testid="stSidebar"] nav a[href*="biggest"]::before {
+        content: '';
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        vertical-align: middle;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.7)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 6 13.5 15.5 8.5 10.5 1 18'/%3E%3Cpolyline points='17 6 23 6 23 12'/%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        opacity: 0.7;
+        flex-shrink: 0;
     }
     </style>
     <script>
-    // Add icons to sidebar navigation
+    // Add icons to sidebar navigation and capitalize Dashboard
     function addNavIcons() {
         const sidebar = document.querySelector('section[data-testid="stSidebar"]');
-        if (!sidebar) return;
+        if (!sidebar) {
+            // Try alternative selector
+            setTimeout(addNavIcons, 100);
+            return;
+        }
         
-        const navLinks = sidebar.querySelectorAll('nav a, [data-testid="stSidebar"] nav a');
+        // Find all navigation links - try multiple selectors
+        let navLinks = sidebar.querySelectorAll('nav a');
+        if (navLinks.length === 0) {
+            navLinks = sidebar.querySelectorAll('a[href]');
+        }
+        if (navLinks.length === 0) {
+            navLinks = sidebar.querySelectorAll('[data-testid*="nav"] a, [class*="nav"] a');
+        }
+        
         navLinks.forEach(link => {
             // Skip if icon already added
             if (link.querySelector('.nav-icon')) return;
             
             const text = link.textContent.trim();
             const href = link.getAttribute('href') || '';
+            const textLower = text.toLowerCase();
             
             let iconSvg = '';
+            let shouldCapitalize = false;
             
-            // Dashboard icon (grid/layout)
-            if (text === 'Dashboard' || href === '/' || href === '' || href.includes('dashboard')) {
+            // Dashboard icon (grid/layout) - check for dashboard (case insensitive)
+            if (textLower === 'dashboard' || href === '/' || href === '' || href === '/dashboard' || href.includes('dashboard')) {
                 iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>';
+                shouldCapitalize = true;
             }
             // Biggest Movers icon (trending up)
-            else if (text.includes('Biggest Movers') || href.includes('Biggest_Movers') || href.includes('biggest')) {
+            else if (textLower.includes('biggest movers') || textLower.includes('biggest_movers') || href.includes('Biggest_Movers') || href.includes('biggest')) {
                 iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>';
             }
             
@@ -437,22 +488,44 @@ st.markdown("""
                 icon.innerHTML = iconSvg;
                 link.insertBefore(icon, link.firstChild);
             }
+            
+            // Capitalize Dashboard text
+            if (shouldCapitalize && textLower === 'dashboard') {
+                const textNode = Array.from(link.childNodes).find(node => node.nodeType === 3);
+                if (textNode) {
+                    textNode.textContent = 'Dashboard';
+                } else {
+                    // If no direct text node, try to update the text content
+                    const currentText = link.textContent.trim();
+                    if (currentText.toLowerCase() === 'dashboard') {
+                        link.innerHTML = link.innerHTML.replace(/dashboard/gi, 'Dashboard');
+                    }
+                }
+            }
         });
     }
     
-    // Run on page load and after navigation
+    // Run immediately and on load
+    addNavIcons();
+    
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', addNavIcons);
-    } else {
-        addNavIcons();
     }
     
     // Re-run after Streamlit navigation (using MutationObserver)
-    const observer = new MutationObserver(addNavIcons);
-    const sidebar = document.querySelector('section[data-testid="stSidebar"]');
-    if (sidebar) {
-        observer.observe(sidebar, { childList: true, subtree: true });
-    }
+    setTimeout(() => {
+        const sidebar = document.querySelector('section[data-testid="stSidebar"]');
+        if (sidebar) {
+            const observer = new MutationObserver(() => {
+                setTimeout(addNavIcons, 50);
+            });
+            observer.observe(sidebar, { childList: true, subtree: true });
+        }
+    }, 500);
+    
+    // Also run after a delay to catch late-rendered elements
+    setTimeout(addNavIcons, 1000);
+    setTimeout(addNavIcons, 2000);
     </script>
 """, unsafe_allow_html=True)
 
