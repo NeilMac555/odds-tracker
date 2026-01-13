@@ -81,9 +81,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Header
+# Hero Header Section
 st.markdown('<p class="main-header">📊 Biggest Movers</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Top 10 matches with largest odds movement (Last 24h)</p>', unsafe_allow_html=True)
+
+# Add spacing
+st.markdown("<br>", unsafe_allow_html=True)
 
 # Database connection
 DATABASE_URL = os.environ.get('DATABASE_URL')
