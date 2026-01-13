@@ -10,18 +10,72 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS
+# Custom CSS with modern typography and spacing
 st.markdown("""
     <style>
+    /* Modern typography system */
+    .stApp {
+        font-size: 16px;
+    }
+    
     .main-header {
-        font-size: 2.5rem;
+        font-size: 3rem;
         font-weight: 700;
-        color: #2E5266;
+        color: #ffffff;
         margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
     }
     .sub-header {
-        font-size: 1.2rem;
-        color: #6E8898;
+        font-size: 1.3rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 3rem;
+        font-weight: 400;
+        letter-spacing: -0.01em;
+    }
+    
+    /* Modern card styling */
+    .mover-card {
+        padding: 20px 24px;
+        margin-bottom: 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background-color: rgba(0, 0, 0, 0.25);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+    
+    .mover-card:hover {
+        background-color: rgba(0, 0, 0, 0.35);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .mover-match {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 8px;
+        letter-spacing: -0.01em;
+    }
+    
+    .mover-details {
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 0.95rem;
+        margin-top: 6px;
+        display: inline-block;
+        line-height: 1.6;
+    }
+    
+    /* Remove heavy dividers */
+    hr {
+        border: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        margin: 2rem 0;
+    }
+    
+    /* Increase spacing between sections */
+    .element-container {
         margin-bottom: 2rem;
     }
     </style>
@@ -210,11 +264,11 @@ if movers:
             arrow = "▼"
             delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
         
-        # Create row
+        # Create modern card row
         row_html = f"""
-        <div style="padding: 12px 16px; margin-bottom: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background-color: rgba(0,0,0,0.2);">
-            <strong style="font-size: 1.1em;">{home} vs {away}</strong> ({league_flag_html} {league_name})<br>
-            <span style="color: rgba(255,255,255,0.7); font-size: 0.95em; margin-top: 4px; display: inline-block;">{outcome} <span style="color: {delta_color}; font-weight: bold;">{delta_display}</span> · Updated {minutes_ago}m ago</span>
+        <div class="mover-card">
+            <div class="mover-match">{home} vs {away} ({league_flag_html} {league_name})</div>
+            <div class="mover-details">{outcome} <span style="color: {delta_color}; font-weight: 600; font-size: 1.05em;">{delta_display}</span> · Updated {minutes_ago}m ago</div>
         </div>
         """
         st.markdown(row_html, unsafe_allow_html=True)
