@@ -78,6 +78,13 @@ st.markdown("""
     .element-container {
         margin-bottom: 2rem;
     }
+    
+    /* Constrain main content column width and center it */
+    .main .block-container {
+        max-width: 950px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
