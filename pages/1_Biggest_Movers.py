@@ -209,11 +209,11 @@ def get_biggest_movers():
                 
                 # Find the largest absolute delta
                 deltas = [
-                    (abs(home_delta), home_delta, 'Home'),
-                    (abs(draw_delta), draw_delta, 'Draw'),
-                    (abs(away_delta), away_delta, 'Away')
+                    (abs(home_delta), home_delta, 'Home', opening_home, latest_home),
+                    (abs(draw_delta), draw_delta, 'Draw', opening_draw, latest_draw),
+                    (abs(away_delta), away_delta, 'Away', opening_away, latest_away)
                 ]
-                max_abs_delta, signed_delta, outcome = max(deltas, key=lambda x: x[0])
+                max_abs_delta, signed_delta, outcome, opening_odds, latest_odds = max(deltas, key=lambda x: x[0])
                 
                 # Calculate minutes ago
                 minutes_ago = int((datetime.now() - latest_time).total_seconds() / 60)
@@ -225,6 +225,8 @@ def get_biggest_movers():
                     'outcome': outcome,
                     'delta_pct': signed_delta,
                     'abs_delta': max_abs_delta,
+                    'opening_odds': opening_odds,
+                    'latest_odds': latest_odds,
                     'minutes_ago': minutes_ago
                 })
     
@@ -250,28 +252,31 @@ if movers:
         league_flag_html = get_league_flag_html(league)
         league_name = "Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '')
         
-        # Format delta with sign, color, and arrow
-        # Betting semantics:
-        # - Odds shortened (probability increased) = green up arrow (team more likely)
-        # - Odds drifted (probability decreased) = red down arrow (team less likely)
-        if delta_pct > 0:
-            # Probability increased (odds shortened) - green up arrow
-            delta_sign = "+"
-            delta_color = "#44ff44"  # Green
-            arrow = "▲"
-            delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
+        # Get opening and latest odds for the moved outcome
+        opening_odds = mover['opening_odds']
+        latest_odds = mover['latest_odds']
+        
+        # Format odds change with betting semantics:
+        # - Odds decreased (e.g., 2.20 → 1.90): "Odds shortening" with green text and down arrow (↓)
+        # - Odds increased (e.g., 2.10 → 2.30): "Odds drifting" with red text and up arrow (↑)
+        if latest_odds < opening_odds:
+            # Odds decreased (shortening) - green text, down arrow
+            status_text = "Odds shortening"
+            status_color = "#44ff44"  # Green
+            arrow = "↓"
+            odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
         else:
-            # Probability decreased (odds drifted) - red down arrow
-            delta_sign = "−"
-            delta_color = "#ff4444"  # Red
-            arrow = "▼"
-            delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
+            # Odds increased (drifting) - red text, up arrow
+            status_text = "Odds drifting"
+            status_color = "#ff4444"  # Red
+            arrow = "↑"
+            odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
         
         # Create modern card row
         row_html = f"""
         <div class="mover-card">
             <div class="mover-match">{home} vs {away} ({league_flag_html} {league_name})</div>
-            <div class="mover-details">{outcome} <span style="color: {delta_color}; font-weight: 600; font-size: 1.05em;">{delta_display}</span> · Updated {minutes_ago}m ago</div>
+            <div class="mover-details">{outcome} · <span style="color: {status_color}; font-weight: 600; font-size: 1.05em;">{arrow} {status_text} ({odds_display})</span> · Updated {minutes_ago}m ago</div>
         </div>
         """
         st.markdown(row_html, unsafe_allow_html=True)
