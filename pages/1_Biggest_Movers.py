@@ -28,16 +28,16 @@ st.markdown("""
     .sub-header {
         font-size: 1.3rem;
         color: rgba(255, 255, 255, 0.7);
-        margin-bottom: 3rem;
+        margin-bottom: 1.5rem;
         font-weight: 400;
         letter-spacing: -0.01em;
     }
     
     /* Modern card styling - compact rows */
     .mover-card {
-        padding: 14px 20px;
-        margin-bottom: 11px;
-        border-radius: 10px;
+        padding: 10px 18px;
+        margin-bottom: 6px;
+        border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         background-color: rgba(0, 0, 0, 0.25);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
@@ -52,20 +52,20 @@ st.markdown("""
     }
     
     .mover-match {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         font-weight: 600;
         color: #ffffff;
-        margin-bottom: 5px;
+        margin-bottom: 3px;
         letter-spacing: -0.01em;
-        line-height: 1.4;
+        line-height: 1.35;
     }
     
     .mover-details {
         color: rgba(255, 255, 255, 0.75);
-        font-size: 0.92rem;
-        margin-top: 3px;
+        font-size: 0.9rem;
+        margin-top: 2px;
         display: inline-block;
-        line-height: 1.45;
+        line-height: 1.4;
     }
     
     /* Subtle animated arrow indicators */
@@ -120,6 +120,7 @@ st.markdown("""
         max-width: 950px !important;
         margin-left: auto !important;
         margin-right: auto !important;
+        padding-top: 1rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -127,9 +128,6 @@ st.markdown("""
 # Hero Header Section
 st.markdown('<p class="main-header">📊 Biggest Movers</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Top 10 matches with largest odds movement (Last 24h)</p>', unsafe_allow_html=True)
-
-# Add spacing
-st.markdown("<br>", unsafe_allow_html=True)
 
 # Database connection
 DATABASE_URL = os.environ.get('DATABASE_URL')
