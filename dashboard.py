@@ -257,65 +257,74 @@ else:
                         home_vals = [float(h['home_odds']) for h in unique_history]
                         draw_vals = [float(h['draw_odds']) for h in unique_history]
                         away_vals = [float(h['away_odds']) for h in unique_history]
+                        
+                        # Get opening and current values for each outcome
+                        home_open = home_vals[0]
+                        home_now = home_vals[-1]
+                        draw_open = draw_vals[0]
+                        draw_now = draw_vals[-1]
+                        away_open = away_vals[0]
+                        away_now = away_vals[-1]
+                        
+                        # Create tabs for each outcome
+                        tab1, tab2, tab3 = st.tabs(["Home", "Draw", "Away"])
+                        
+                        # Helper function to create a focused graph for a single outcome
+                        def create_focused_graph(timestamps, values, outcome_name, color, open_val, now_val):
+                            # Calculate Y-axis range based on this outcome's data with padding
+                            if values:
+                                y_min = min(values)
+                                y_max = max(values)
+                                # Add 5% padding above and below for better visualization
+                                padding = (y_max - y_min) * 0.05
+                                if padding == 0:  # If all values are the same, add small fixed padding
+                                    padding = y_min * 0.01 if y_min > 0 else 0.1
+                                y_range = [max(0, y_min - padding), y_max + padding]
+                            else:
+                                y_range = None
                             
-                        # Calculate Y-axis range based on actual data with padding
-                        all_vals = home_vals + draw_vals + away_vals
-                        if all_vals:
-                            y_min = min(all_vals)
-                            y_max = max(all_vals)
-                            # Add 10% padding above and below for better visualization
-                            padding = (y_max - y_min) * 0.1
-                            y_range = [max(0, y_min - padding), y_max + padding]
-                        else:
-                            y_range = None
+                            # Create Plotly figure with focused Y-axis range
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(
+                                x=timestamps,
+                                y=values,
+                                mode='lines+markers',
+                                name=outcome_name,
+                                line=dict(color=color, width=2),
+                                marker=dict(size=4)
+                            ))
+                            
+                            # Update layout with custom Y-axis range
+                            fig.update_layout(
+                                height=400,
+                                xaxis_title="Time",
+                                yaxis_title="Odds",
+                                yaxis=dict(range=y_range) if y_range else {},
+                                hovermode='x unified',
+                                plot_bgcolor='rgba(0,0,0,0)',
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                font=dict(color='white')
+                            )
+                            
+                            return fig
                         
-                        # Create Plotly figure with custom Y-axis range and markers
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(
-                            x=timestamps,
-                            y=home_vals,
-                            mode='lines+markers',
-                            name='Home',
-                            line=dict(color='#FF6B6B', width=2),
-                            marker=dict(size=4)
-                        ))
-                        fig.add_trace(go.Scatter(
-                            x=timestamps,
-                            y=draw_vals,
-                            mode='lines+markers',
-                            name='Draw',
-                            line=dict(color='#4ECDC4', width=2),
-                            marker=dict(size=4)
-                        ))
-                        fig.add_trace(go.Scatter(
-                            x=timestamps,
-                            y=away_vals,
-                            mode='lines+markers',
-                            name='Away',
-                            line=dict(color='#95E1D3', width=2),
-                            marker=dict(size=4)
-                        ))
+                        # Home tab
+                        with tab1:
+                            st.markdown(f"**Open:** {home_open:.2f} • **Now:** {home_now:.2f}")
+                            fig_home = create_focused_graph(timestamps, home_vals, 'Home', '#FF6B6B', home_open, home_now)
+                            st.plotly_chart(fig_home, use_container_width=True)
                         
-                        # Update layout with custom Y-axis range
-                        fig.update_layout(
-                            height=400,
-                            xaxis_title="Time",
-                            yaxis_title="Odds",
-                            yaxis=dict(range=y_range) if y_range else {},
-                            hovermode='x unified',
-                            legend=dict(
-                                orientation="h",
-                                yanchor="bottom",
-                                y=1.02,
-                                xanchor="right",
-                                x=1
-                            ),
-                            plot_bgcolor='rgba(0,0,0,0)',
-                            paper_bgcolor='rgba(0,0,0,0)',
-                            font=dict(color='white')
-                        )
+                        # Draw tab
+                        with tab2:
+                            st.markdown(f"**Open:** {draw_open:.2f} • **Now:** {draw_now:.2f}")
+                            fig_draw = create_focused_graph(timestamps, draw_vals, 'Draw', '#4ECDC4', draw_open, draw_now)
+                            st.plotly_chart(fig_draw, use_container_width=True)
                         
-                        st.plotly_chart(fig, use_container_width=True)
+                        # Away tab
+                        with tab3:
+                            st.markdown(f"**Open:** {away_open:.2f} • **Now:** {away_now:.2f}")
+                            fig_away = create_focused_graph(timestamps, away_vals, 'Away', '#95E1D3', away_open, away_now)
+                            st.plotly_chart(fig_away, use_container_width=True)
                             
                 else:
                     st.info("Not enough historical data yet. Check back after a few updates.")
