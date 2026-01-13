@@ -103,6 +103,39 @@ st.markdown("""
         opacity: 0.65;
     }
     
+    /* Live indicator - subtle pulsing dot */
+    @keyframes subtlePulse {
+        0%, 100% {
+            opacity: 0.6;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+    }
+    
+    .live-indicator {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        margin-left: 6px;
+        vertical-align: middle;
+        animation: subtlePulse 2s ease-in-out infinite;
+        box-shadow: 0 0 4px currentColor;
+    }
+    
+    .live-indicator.live-shortening {
+        background-color: #44ff44;
+        color: #44ff44;
+    }
+    
+    .live-indicator.live-drifting {
+        background-color: #ff4444;
+        color: #ff4444;
+    }
+    
     /* Remove heavy dividers */
     hr {
         border: none;
@@ -307,6 +340,7 @@ if movers:
             arrow = "↓"
             arrow_class = "arrow-shortening"
             odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
+            live_class = "live-shortening"
         else:
             # Odds increased (drifting) - red text, up arrow with gentle downward animation
             status_text = "Odds drifting"
@@ -314,12 +348,17 @@ if movers:
             arrow = "↑"
             arrow_class = "arrow-drifting"
             odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
+            live_class = "live-drifting"
+        
+        # Check if updated in last 2 minutes for live indicator
+        is_live = minutes_ago <= 2
+        live_indicator = f'<span class="live-indicator {live_class}"></span>' if is_live else ''
         
         # Create modern card row
         row_html = f"""
         <div class="mover-card">
             <div class="mover-match">{home} vs {away} ({league_flag_html} {league_name})</div>
-            <div class="mover-details">{outcome} · <span style="color: {status_color}; font-weight: 600; font-size: 1.05em;"><span class="{arrow_class}">{arrow}</span> {status_text} ({odds_display})</span> · Updated {minutes_ago}m ago</div>
+            <div class="mover-details">{outcome} · <span style="color: {status_color}; font-weight: 600; font-size: 1.05em;"><span class="{arrow_class}">{arrow}</span> {status_text} ({odds_display}){live_indicator}</span> · Updated {minutes_ago}m ago</div>
         </div>
         """
         st.markdown(row_html, unsafe_allow_html=True)
