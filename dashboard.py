@@ -693,42 +693,6 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# Filters toggle button and drawer
-st.markdown("""
-    <button class="filters-toggle-btn" onclick="toggleDrawer()">Filters</button>
-    <div class="filter-drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
-    <div class="filter-drawer" id="filterDrawer">
-        <h3>Leagues</h3>
-        <div id="leagueFilters"></div>
-    </div>
-    <script>
-    function toggleDrawer() {
-        const drawer = document.getElementById('filterDrawer');
-        const overlay = document.getElementById('drawerOverlay');
-        if (drawer && overlay) {
-            drawer.classList.toggle('open');
-            overlay.classList.toggle('open');
-        }
-    }
-    
-    function closeDrawer() {
-        const drawer = document.getElementById('filterDrawer');
-        const overlay = document.getElementById('drawerOverlay');
-        if (drawer && overlay) {
-            drawer.classList.remove('open');
-            overlay.classList.remove('open');
-        }
-    }
-    
-    // Close drawer on Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeDrawer();
-        }
-    });
-    </script>
-""", unsafe_allow_html=True)
-
 # Header with compact status
 header_col1, header_col2 = st.columns([0.7, 0.3])
 with header_col1:
