@@ -807,7 +807,7 @@ else:
                         st.info("Not enough historical data yet. Check back after a few updates.")
     
     # Auto-refresh toggle
-    st.sidebar.markdown("---")
+    st.sidebar.markdown("<br>", unsafe_allow_html=True)
     auto_refresh = st.sidebar.checkbox("Auto-refresh (60s)", value=False)
     
     if auto_refresh:
