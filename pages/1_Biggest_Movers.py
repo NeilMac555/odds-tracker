@@ -33,38 +33,39 @@ st.markdown("""
         letter-spacing: -0.01em;
     }
     
-    /* Modern card styling */
+    /* Modern card styling - compact rows */
     .mover-card {
-        padding: 20px 24px;
-        margin-bottom: 16px;
-        border-radius: 14px;
+        padding: 14px 20px;
+        margin-bottom: 11px;
+        border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         background-color: rgba(0, 0, 0, 0.25);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
         transition: all 0.3s ease;
         backdrop-filter: blur(10px);
     }
     
     .mover-card:hover {
         background-color: rgba(0, 0, 0, 0.35);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15);
-        transform: translateY(-2px);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.12);
+        transform: translateY(-1px);
     }
     
     .mover-match {
-        font-size: 1.15rem;
+        font-size: 1.1rem;
         font-weight: 600;
         color: #ffffff;
-        margin-bottom: 8px;
+        margin-bottom: 5px;
         letter-spacing: -0.01em;
+        line-height: 1.4;
     }
     
     .mover-details {
         color: rgba(255, 255, 255, 0.75);
-        font-size: 0.95rem;
-        margin-top: 6px;
+        font-size: 0.92rem;
+        margin-top: 3px;
         display: inline-block;
-        line-height: 1.6;
+        line-height: 1.45;
     }
     
     /* Remove heavy dividers */
