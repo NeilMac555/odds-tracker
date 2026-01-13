@@ -518,54 +518,6 @@ else:
     
     st.markdown("---")
     
-    # Biggest Movers Section
-    st.subheader("Biggest Movers (Last 24h)")
-    movers = get_biggest_movers()
-    
-    if movers:
-        for i, mover in enumerate(movers):
-            league = mover['league']
-            home = mover['home_team']
-            away = mover['away_team']
-            outcome = mover['outcome']
-            delta_pct = mover['delta_pct']
-            minutes_ago = mover['minutes_ago']
-            
-            # Get league flag
-            league_flag_html = get_league_flag(league)
-            league_name = "Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '')
-            
-            # Format delta with sign, color, and arrow
-            if delta_pct > 0:
-                # Positive delta (probability increased) - red
-                delta_sign = "+"
-                delta_color = "#ff4444"  # Red
-                arrow = "↑"
-                delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
-            else:
-                # Negative delta (probability decreased) - green
-                delta_sign = "−"
-                delta_color = "#44ff44"  # Green
-                arrow = "↓"
-                delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
-            
-            # Create clickable row
-            match_id = f"match_{league}_{home}_{away}".replace(" ", "_").replace(".", "")
-            row_html = f"""
-            <div id="{match_id}_link" style="padding: 8px 12px; margin-bottom: 4px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background-color: rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s ease;" 
-                 onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" 
-                 onmouseout="this.style.backgroundColor='rgba(0,0,0,0.2)'"
-                 onclick="document.getElementById('{match_id}').scrollIntoView({{behavior: 'smooth', block: 'center'}});">
-                <strong>{home} vs {away}</strong> ({league_flag_html} {league_name})<br>
-                <span style="color: rgba(255,255,255,0.7); font-size: 0.9em;">{outcome} <span style="color: {delta_color}; font-weight: bold;">{delta_display}</span> · Updated {minutes_ago}m ago</span>
-            </div>
-            """
-            st.markdown(row_html, unsafe_allow_html=True)
-    else:
-        st.info("No movement data available yet.")
-    
-    st.markdown("---")
-    
     # Group by date first, then by match
     matches_by_date = {}
     for row in filtered_data:
@@ -590,15 +542,11 @@ else:
         
         for (league, home, away), match_data in matches_by_date[match_date].items():
             league_flag_html = get_league_flag(league)
-            # Create unique ID for this match for scrolling
-            match_id = f"match_{league}_{home}_{away}".replace(" ", "_").replace(".", "")
             # Create a container with flag and expander
             flag_col, expander_col = st.columns([0.05, 0.95])
             with flag_col:
                 st.markdown(league_flag_html, unsafe_allow_html=True)
             with expander_col:
-                # Add anchor div for scrolling
-                st.markdown(f'<div id="{match_id}"></div>', unsafe_allow_html=True)
                 with st.expander(f"{home} vs {away} ({league})", expanded=False):
                     # Display odds table
                     st.subheader("Current Odds")
