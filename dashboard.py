@@ -580,7 +580,8 @@ else:
             minutes_ago = int((datetime.now() - latest_update).total_seconds() / 60)
             st.metric("Last Update", f"{minutes_ago}m ago")
     
-    st.markdown("---")
+    # Add spacing before match listings (removed heavy divider)
+    st.markdown("<br>", unsafe_allow_html=True)
     
     # Group by date first, then by match
     matches_by_date = {}
