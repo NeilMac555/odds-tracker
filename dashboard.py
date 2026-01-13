@@ -92,6 +92,108 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
     }
     
+    /* Responsive odds display */
+    .odds-table-container {
+        width: 100%;
+    }
+    
+    /* Desktop: show table, hide cards */
+    .odds-table-desktop {
+        display: table;
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .odds-cards-mobile {
+        display: none;
+    }
+    
+    /* Mobile card styling */
+    .odds-card-mobile {
+        background-color: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .odds-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .odds-card-header strong {
+        color: #ffffff;
+        font-size: 1rem;
+    }
+    
+    .odds-card-updated {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.85rem;
+    }
+    
+    .odds-card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .odds-card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+    }
+    
+    .odds-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .odds-value {
+        color: #ffffff;
+        font-size: 0.95rem;
+        text-align: right;
+    }
+    
+    /* Mobile responsive: hide table, show cards */
+    @media screen and (max-width: 768px) {
+        .odds-table-desktop {
+            display: none !important;
+        }
+        
+        .odds-cards-mobile {
+            display: block !important;
+        }
+        
+        /* Adjust main content for mobile */
+        .main .block-container {
+            max-width: 100% !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        
+        /* Adjust header for mobile */
+        .main-header {
+            font-size: 2rem !important;
+        }
+        
+        .sub-header {
+            font-size: 1.1rem !important;
+        }
+        
+        /* Adjust expander padding for mobile */
+        .stExpander > div {
+            padding: 16px !important;
+        }
+    }
+    
     /* Compact status text */
     .status-text {
         font-size: 0.85rem;
@@ -724,8 +826,9 @@ else:
                             'Updated': timestamp
                         })
                     
-                    # Create HTML table for better formatting
-                    html_table = "<table style='width: 100%; border-collapse: collapse;'>"
+                    # Create HTML table for desktop and cards for mobile
+                    html_table = "<div class='odds-table-container'>"
+                    html_table += "<table class='odds-table-desktop' style='width: 100%; border-collapse: collapse;'>"
                     html_table += "<thead><tr style='border-bottom: 2px solid rgba(255,255,255,0.2);'>"
                     html_table += "<th style='text-align: left; padding: 8px;'>Bookmaker</th>"
                     html_table += "<th style='text-align: center; padding: 8px;'>Home</th>"
@@ -734,7 +837,11 @@ else:
                     html_table += "<th style='text-align: right; padding: 8px;'>Updated</th>"
                     html_table += "</tr></thead><tbody>"
                     
+                    # Mobile cards container
+                    html_table += "<div class='odds-cards-mobile'>"
+                    
                     for row_data in table_rows:
+                        # Desktop table row
                         html_table += "<tr style='border-bottom: 1px solid rgba(255,255,255,0.1);'>"
                         html_table += f"<td style='padding: 8px;'><strong>{row_data['Bookmaker']}</strong></td>"
                         html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Home']}</td>"
@@ -742,8 +849,34 @@ else:
                         html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Away']}</td>"
                         html_table += f"<td style='padding: 8px; text-align: right;'>{row_data['Updated']}</td>"
                         html_table += "</tr>"
+                        
+                        # Mobile card
+                        html_table += f"""
+                        <div class='odds-card-mobile'>
+                            <div class='odds-card-header'>
+                                <strong>{row_data['Bookmaker']}</strong>
+                                <span class='odds-card-updated'>{row_data['Updated']}</span>
+                            </div>
+                            <div class='odds-card-body'>
+                                <div class='odds-card-row'>
+                                    <span class='odds-label'>Home:</span>
+                                    <span class='odds-value'>{row_data['Home']}</span>
+                                </div>
+                                <div class='odds-card-row'>
+                                    <span class='odds-label'>Draw:</span>
+                                    <span class='odds-value'>{row_data['Draw']}</span>
+                                </div>
+                                <div class='odds-card-row'>
+                                    <span class='odds-label'>Away:</span>
+                                    <span class='odds-value'>{row_data['Away']}</span>
+                                </div>
+                            </div>
+                        </div>
+                        """
                     
-                    html_table += "</tbody></table>"
+                    html_table += "</div>"  # Close mobile cards container
+                    html_table += "</tbody></table>"  # Close desktop table
+                    html_table += "</div>"  # Close odds-table-container
                     st.markdown(html_table, unsafe_allow_html=True)
                     
                     # Historical trends
