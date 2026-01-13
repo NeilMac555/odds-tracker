@@ -605,6 +605,9 @@ else:
         else:
             st.subheader(f"📅 {match_date.strftime('%A, %B %d, %Y')}")
         
+        # Add spacing after date header
+        st.markdown("<br>", unsafe_allow_html=True)
+        
         for (league, home, away), match_data in matches_by_date[match_date].items():
             league_flag_html = get_league_flag(league)
             # Create a container with flag and expander
