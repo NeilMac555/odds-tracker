@@ -102,9 +102,12 @@ st.markdown("""
         padding-top: 0;
     }
     
-    /* Reduce top padding */
+    /* Constrain main content column width and center it */
     .main .block-container {
         padding-top: 1rem !important;
+        max-width: 1150px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
     
     /* Reduce spacing after header */
