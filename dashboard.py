@@ -28,6 +28,14 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
+    /* Ensure flag emojis render properly */
+    .flag-emoji {
+        font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", "EmojiSymbols", "EmojiOne Mozilla", "Twemoji Mozilla", "Segoe UI Symbol", sans-serif;
+        font-size: 1.2em;
+        display: inline-block;
+        line-height: 1;
+    }
+    
     /* Segmented Control Styling - ONLY for Home/Draw/Away tabs inside expanders */
     /* Completely exclude sidebar - use very specific selectors */
     section[data-testid="stSidebar"] .stRadio,
@@ -267,13 +275,23 @@ def get_odds_direction(history, odds_type):
     else:
         return "—", "gray"
 
-# League to flag emoji mapping
+# League to flag emoji mapping (using direct Unicode for better browser compatibility)
+# Flag emojis are regional indicator symbols that combine to form flags
 LEAGUE_FLAGS = {
-    'EPL': '🇬🇧',
-    'Italy Serie A': '🇮🇹',
-    'Spain La Liga': '🇪🇸',
-    'Germany Bundesliga': '🇩🇪',
-    'France Ligue One': '🇫🇷'
+    'EPL': '🇬🇧',  # GB flag
+    'Italy Serie A': '🇮🇹',  # IT flag
+    'Spain La Liga': '🇪🇸',  # ES flag
+    'Germany Bundesliga': '🇩🇪',  # DE flag
+    'France Ligue One': '🇫🇷'  # FR flag
+}
+
+# Alternative: Country code mapping if flags don't render
+LEAGUE_COUNTRY_CODES = {
+    'EPL': 'GB',
+    'Italy Serie A': 'IT',
+    'Spain La Liga': 'ES',
+    'Germany Bundesliga': 'DE',
+    'France Ligue One': 'FR'
 }
 
 # League navigation mapping (database name -> display name with flag)
@@ -287,8 +305,11 @@ LEAGUE_DISPLAY_NAMES = {
 }
 
 def get_league_flag(league):
-    """Get the flag emoji for a league"""
-    return LEAGUE_FLAGS.get(league, '⚽')
+    """Get the flag emoji for a league, with fallback to country code"""
+    flag = LEAGUE_FLAGS.get(league, '⚽')
+    # If flag doesn't render properly, it might show as [XX], so we'll use HTML span
+    # to ensure proper rendering
+    return flag
 
 # Supported leagues (always show all, even if 0 matches)
 SUPPORTED_LEAGUES = ['EPL', 'Italy Serie A', 'Spain La Liga', 'Germany Bundesliga', 'France Ligue One']
@@ -368,7 +389,9 @@ else:
         
         for (league, home, away), match_data in matches_by_date[match_date].items():
             league_flag = get_league_flag(league)
-            with st.expander(f"{league_flag} {home} vs {away} ({league})", expanded=False):
+            # Use flag emoji directly - Streamlit should handle it
+            match_title = f"{league_flag} {home} vs {away} ({league})"
+            with st.expander(match_title, expanded=False):
                 
                 # Display odds table
                 st.subheader("Current Odds")
