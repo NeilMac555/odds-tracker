@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="OddsEdge - Live Odds Tracker",
     page_icon="favicon.png",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # Custom CSS for branding and segmented control with modern typography
@@ -369,117 +369,15 @@ st.markdown("""
         text-align: center !important;
     }
     
-    /* Hide sidebar completely - drawer will replace it */
+    /* Reduce sidebar width */
     section[data-testid="stSidebar"] {
-        display: none !important;
+        min-width: 18rem !important;
+        max-width: 18rem !important;
     }
     
-    /* Filter drawer overlay */
-    .filter-drawer-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 999;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s ease;
-    }
-    
-    .filter-drawer-overlay.open {
-        opacity: 1;
-        visibility: visible;
-    }
-    
-    /* Filter drawer */
-    .filter-drawer {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 280px;
-        height: 100%;
-        background-color: rgba(14, 17, 23, 0.98);
-        z-index: 1000;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
-        overflow-y: auto;
-        padding: 1.5rem;
-    }
-    
-    .filter-drawer.open {
-        transform: translateX(0);
-    }
-    
-    .filter-drawer h3 {
-        color: rgba(255, 255, 255, 0.9) !important;
-        font-size: 1.2rem !important;
-        margin-bottom: 1.5rem !important;
-        margin-top: 0 !important;
-    }
-    
-    /* Filters button */
-    .filters-toggle-btn {
-        position: fixed;
-        top: 1rem;
-        left: 1rem;
-        z-index: 998;
-        background-color: rgba(0, 0, 0, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: rgba(255, 255, 255, 0.9);
-        padding: 8px 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        backdrop-filter: blur(10px);
-    }
-    
-    .filters-toggle-btn:hover {
-        background-color: rgba(0, 0, 0, 0.8);
-        border-color: rgba(255, 255, 255, 0.3);
-        color: #ffffff;
-    }
-    
-    /* Drawer league buttons */
-    .drawer-league-btn {
-        width: 100%;
-        text-align: left;
-        padding: 10px 14px;
-        margin-bottom: 8px;
-        border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background-color: rgba(0, 0, 0, 0.3);
-        color: rgba(255, 255, 255, 0.7);
-        transition: all 0.2s ease;
-        cursor: pointer;
-        font-size: 0.95rem;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .drawer-league-btn:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.2);
-        color: rgba(255, 255, 255, 0.9);
-    }
-    
-    .drawer-league-btn.active {
-        background-color: rgba(255, 255, 255, 0.15);
-        color: rgba(255, 255, 255, 0.95);
-        border-color: rgba(255, 255, 255, 0.25);
-        font-weight: 600;
-    }
-    
-    /* Expand main content when sidebar is hidden */
-    .main .block-container {
-        max-width: 100% !important;
-        padding-left: 4rem !important;
-        padding-right: 2rem !important;
+    /* Make sidebar feel secondary - reduce overall visual weight */
+    section[data-testid="stSidebar"] {
+        background-color: rgba(0, 0, 0, 0.3) !important;
     }
     
     /* Lower contrast for sidebar headings */
@@ -984,69 +882,40 @@ SUPPORTED_LEAGUES = ['EPL', 'Italy Serie A', 'Spain La Liga', 'Germany Bundeslig
 # Load current odds
 odds_data = load_latest_odds()
 
-# League navigation in drawer
+# League navigation in sidebar
 # Initialize session state for selected league
 if 'selected_league' not in st.session_state:
     st.session_state.selected_league = None
 
-# Handle league selection from query params
-if 'league' in st.query_params:
-    league_param = st.query_params.get('league')
-    if league_param == '' or league_param is None:
-        st.session_state.selected_league = None
-    else:
-        # Map back to internal league name
-        league_map = {
-            'EPL': 'EPL',
-            'Premier League': 'EPL',
-            'Serie A': 'Italy Serie A',
-            'La Liga': 'Spain La Liga',
-            'Bundesliga': 'Germany Bundesliga',
-            'Ligue One': 'France Ligue One'
-        }
-        st.session_state.selected_league = league_map.get(league_param, league_param)
-    # Don't clear query params - let them persist for the session
+st.sidebar.markdown("### Leagues")
 
-# Build league filters HTML for drawer
-league_filters_html = ""
+# Display clickable league options with flags
 for league in [None] + SUPPORTED_LEAGUES:
     if league is None:
         # All Leagues option
         is_selected = st.session_state.selected_league is None
-        active_class = "active" if is_selected else ""
-        league_filters_html += f'''
-        <button class="drawer-league-btn {active_class}" onclick="window.location.href='?league='">
-            <span>🌍</span>
-            <span>All Leagues</span>
-        </button>
-        '''
+        # Use columns to display flag and button
+        col1, col2 = st.sidebar.columns([0.15, 0.85])
+        with col1:
+            st.markdown("🌍")
+        with col2:
+            if st.button("All Leagues", key=f"league_{league}", use_container_width=True, type="primary" if is_selected else "secondary"):
+                st.session_state.selected_league = None
+                st.rerun()
     else:
         # Individual league options
         flag_html = get_league_flag_html(league)
         league_name = "Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '')
         is_selected = st.session_state.selected_league == league
-        active_class = "active" if is_selected else ""
-        # Use league name for URL
-        league_url = league_name.replace(' ', '%20')
-        league_filters_html += f'''
-        <button class="drawer-league-btn {active_class}" onclick="window.location.href='?league={league_url}'">
-            {flag_html}
-            <span>{league_name}</span>
-        </button>
-        '''
-
-# Inject league filters into drawer
-st.markdown(f"""
-    <script>
-    // Update drawer content on load
-    document.addEventListener('DOMContentLoaded', function() {{
-        const filtersContainer = document.getElementById('leagueFilters');
-        if (filtersContainer) {{
-            filtersContainer.innerHTML = `{league_filters_html}`;
-        }}
-    }});
-    </script>
-""", unsafe_allow_html=True)
+        
+        # Use columns to display flag and button
+        col1, col2 = st.sidebar.columns([0.15, 0.85])
+        with col1:
+            st.markdown(flag_html, unsafe_allow_html=True)
+        with col2:
+            if st.button(league_name, key=f"league_{league}", use_container_width=True, type="primary" if is_selected else "secondary"):
+                st.session_state.selected_league = league
+                st.rerun()
 
 # Get the selected league value
 selected_league = st.session_state.selected_league
