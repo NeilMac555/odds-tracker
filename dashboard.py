@@ -28,24 +28,40 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* Segmented Control Styling */
-    .stRadio > div {
+    /* Segmented Control Styling - Only for main content area, not sidebar */
+    /* Exclude sidebar explicitly - reset any custom styling */
+    section[data-testid="stSidebar"] .stRadio,
+    [data-testid="stSidebar"] .stRadio {
+        all: revert !important;
+    }
+    
+    section[data-testid="stSidebar"] .stRadio *,
+    [data-testid="stSidebar"] .stRadio * {
+        all: revert !important;
+    }
+    
+    /* Target radio buttons in main content only (inside expanders/block containers) */
+    .element-container .stRadio > div,
+    .stExpander .stRadio > div {
         display: flex !important;
         gap: 7px !important;
         margin-bottom: 16px !important;
         flex-direction: row !important;
     }
     
-    .stRadio > div[role="radiogroup"] {
+    .element-container .stRadio > div[role="radiogroup"],
+    .stExpander .stRadio > div[role="radiogroup"] {
         display: flex !important;
         gap: 7px !important;
         width: 100% !important;
+        flex-direction: row !important;
     }
     
-    /* Target all label elements within radio groups */
-    .stRadio > div > label,
-    .stRadio > div[role="radiogroup"] > label,
-    .stRadio label {
+    /* Target labels in main content only - exclude sidebar */
+    .element-container .stRadio > div > label,
+    .element-container .stRadio > div[role="radiogroup"] > label,
+    .stExpander .stRadio > div > label,
+    .stExpander .stRadio > div[role="radiogroup"] > label {
         flex: 1 !important;
         padding: 9px 15px !important;
         border-radius: 7px !important;
@@ -59,34 +75,39 @@ st.markdown("""
         position: relative !important;
         margin-bottom: 0 !important;
         display: flex !important;
+        flex-direction: row !important;
         align-items: center !important;
         justify-content: center !important;
         min-height: 38px !important;
         box-sizing: border-box !important;
+        writing-mode: horizontal-tb !important;
+        text-orientation: mixed !important;
     }
     
-    .stRadio > div > label:hover,
-    .stRadio > div[role="radiogroup"] > label:hover,
-    .stRadio label:hover {
+    .element-container .stRadio > div > label:hover,
+    .element-container .stRadio > div[role="radiogroup"] > label:hover,
+    .stExpander .stRadio > div > label:hover,
+    .stExpander .stRadio > div[role="radiogroup"] > label:hover {
         background-color: rgba(0, 0, 0, 0.4) !important;
         color: rgba(255, 255, 255, 0.8) !important;
     }
     
-    /* Active tab styling - using multiple selectors for compatibility */
-    .stRadio > div > label:has(input[type="radio"]:checked),
-    .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked),
-    .stRadio label:has(input[type="radio"]:checked),
-    .stRadio label[data-baseweb="radio"]:has(input:checked) {
+    /* Active tab styling - main content only */
+    .element-container .stRadio > div > label:has(input[type="radio"]:checked),
+    .element-container .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked),
+    .stExpander .stRadio > div > label:has(input[type="radio"]:checked),
+    .stExpander .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked) {
         background-color: rgba(255, 255, 255, 0.15) !important;
         color: rgba(255, 255, 255, 0.95) !important;
         border-color: rgba(255, 255, 255, 0.25) !important;
         font-weight: 600 !important;
     }
     
-    /* Active tab underline */
-    .stRadio > div > label:has(input[type="radio"]:checked)::after,
-    .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked)::after,
-    .stRadio label:has(input[type="radio"]:checked)::after {
+    /* Active tab underline - main content only */
+    .element-container .stRadio > div > label:has(input[type="radio"]:checked)::after,
+    .element-container .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked)::after,
+    .stExpander .stRadio > div > label:has(input[type="radio"]:checked)::after,
+    .stExpander .stRadio > div[role="radiogroup"] > label:has(input[type="radio"]:checked)::after {
         content: '' !important;
         position: absolute !important;
         bottom: 0 !important;
@@ -97,8 +118,9 @@ st.markdown("""
         border-radius: 0 0 7px 7px !important;
     }
     
-    /* Hide default radio button circles but keep functionality */
-    .stRadio input[type="radio"] {
+    /* Hide default radio button circles but keep functionality - main content only */
+    .element-container .stRadio input[type="radio"],
+    .stExpander .stRadio input[type="radio"] {
         position: absolute !important;
         opacity: 0 !important;
         width: 0 !important;
@@ -107,19 +129,31 @@ st.markdown("""
         pointer-events: none !important;
     }
     
-    /* Ensure proper spacing */
-    .stRadio {
+    /* Ensure proper spacing - main content only */
+    .element-container .stRadio,
+    .stExpander .stRadio {
         margin-bottom: 8px !important;
     }
     
-    /* Style the label text container */
-    .stRadio label > div {
+    /* Style the label text container - ensure horizontal text */
+    .element-container .stRadio label > div,
+    .stExpander .stRadio label > div {
         width: 100% !important;
         text-align: center !important;
+        writing-mode: horizontal-tb !important;
+        text-orientation: mixed !important;
     }
     
-    /* Remove default radio button styling */
-    .stRadio [data-baseweb="radio"] {
+    /* Ensure text inside labels is horizontal */
+    .element-container .stRadio label,
+    .stExpander .stRadio label {
+        writing-mode: horizontal-tb !important;
+        text-orientation: mixed !important;
+    }
+    
+    /* Remove default radio button styling - main content only */
+    .element-container .stRadio [data-baseweb="radio"],
+    .stExpander .stRadio [data-baseweb="radio"] {
         display: none !important;
     }
     </style>
