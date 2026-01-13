@@ -144,6 +144,23 @@ st.markdown("""
         width: 100% !important;
         text-align: center !important;
     }
+    
+    /* Style league selection buttons in sidebar */
+    .stSidebar button[kind="secondary"] {
+        width: 100% !important;
+        text-align: left !important;
+        padding: 8px 12px !important;
+        margin-bottom: 4px !important;
+        border-radius: 4px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: rgba(0, 0, 0, 0.2) !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .stSidebar button[kind="secondary"]:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -315,38 +332,42 @@ SUPPORTED_LEAGUES = ['EPL', 'Italy Serie A', 'Spain La Liga', 'Germany Bundeslig
 odds_data = load_latest_odds()
 
 # League navigation in sidebar
+# Initialize session state for selected league
+if 'selected_league' not in st.session_state:
+    st.session_state.selected_league = None
 
-# Create league options for radio button with flag images
-# We'll create custom display with flags using markdown, then use radio for selection
 st.sidebar.markdown("### Leagues")
 
-# Display league options with flags
-league_display_map = {}
-for i, league in enumerate([None] + SUPPORTED_LEAGUES):
+# Display clickable league options with flags
+for league in [None] + SUPPORTED_LEAGUES:
     if league is None:
-        display_text = "🌍 All Leagues"
-        league_display_map[display_text] = None
-        st.sidebar.markdown(f"**{display_text}**")
+        # All Leagues option
+        is_selected = st.session_state.selected_league is None
+        # Use columns to display flag and button
+        col1, col2 = st.sidebar.columns([0.15, 0.85])
+        with col1:
+            st.markdown("🌍")
+        with col2:
+            if st.button("All Leagues", key=f"league_{league}", use_container_width=True, type="primary" if is_selected else "secondary"):
+                st.session_state.selected_league = None
+                st.rerun()
     else:
+        # Individual league options
         flag_html = get_league_flag_html(league)
         league_name = "Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '')
-        display_text = f"{league_name}"
-        league_display_map[display_text] = league
-        st.sidebar.markdown(f"{flag_html} **{display_text}**", unsafe_allow_html=True)
+        is_selected = st.session_state.selected_league == league
+        
+        # Use columns to display flag and button
+        col1, col2 = st.sidebar.columns([0.15, 0.85])
+        with col1:
+            st.markdown(flag_html, unsafe_allow_html=True)
+        with col2:
+            if st.button(league_name, key=f"league_{league}", use_container_width=True, type="primary" if is_selected else "secondary"):
+                st.session_state.selected_league = league
+                st.rerun()
 
-# Use radio button for league selection (with plain text options)
-league_options = ['🌍 All Leagues'] + [f"Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '') for league in SUPPORTED_LEAGUES]
-league_values = [None] + SUPPORTED_LEAGUES
-
-selected_league_display = st.sidebar.radio(
-    "Select League",
-    options=league_options,
-    index=0,
-    label_visibility="collapsed"
-)
-
-# Map display name back to database name
-selected_league = None if selected_league_display == LEAGUE_DISPLAY_NAMES[None] else league_values[league_options.index(selected_league_display)]
+# Get the selected league value
+selected_league = st.session_state.selected_league
 
 if not odds_data:
     st.warning("No odds data available yet. The data collector may still be gathering initial data.")
