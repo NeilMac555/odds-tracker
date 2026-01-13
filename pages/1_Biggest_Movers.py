@@ -194,17 +194,20 @@ if movers:
         league_name = "Premier League" if league == 'EPL' else league.replace('Italy ', '').replace('Spain ', '').replace('Germany ', '').replace('France ', '')
         
         # Format delta with sign, color, and arrow
+        # Betting semantics:
+        # - Odds shortened (probability increased) = green up arrow (team more likely)
+        # - Odds drifted (probability decreased) = red down arrow (team less likely)
         if delta_pct > 0:
-            # Positive delta (probability increased) - red
+            # Probability increased (odds shortened) - green up arrow
             delta_sign = "+"
-            delta_color = "#ff4444"  # Red
-            arrow = "↑"
+            delta_color = "#44ff44"  # Green
+            arrow = "▲"
             delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
         else:
-            # Negative delta (probability decreased) - green
+            # Probability decreased (odds drifted) - red down arrow
             delta_sign = "−"
-            delta_color = "#44ff44"  # Green
-            arrow = "↓"
+            delta_color = "#ff4444"  # Red
+            arrow = "▼"
             delta_display = f"{arrow} {delta_sign}{abs(delta_pct):.2f}%"
         
         # Create row
