@@ -503,6 +503,23 @@ st.markdown("""
         opacity: 0.7;
         flex-shrink: 0;
     }
+    
+    /* CSS fallback for Hedge Calculator icon */
+    section[data-testid="stSidebar"] nav a[href*="Hedge_Calculator"]::before,
+    section[data-testid="stSidebar"] nav a[href*="hedge"]::before {
+        content: '';
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        vertical-align: middle;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.7)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='2' width='16' height='20' rx='2'/%3E%3Cline x1='8' y1='6' x2='16' y2='6'/%3E%3Cline x1='8' y1='10' x2='16' y2='10'/%3E%3Cline x1='8' y1='14' x2='16' y2='14'/%3E%3Cline x1='8' y1='18' x2='16' y2='18'/%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        opacity: 0.7;
+        flex-shrink: 0;
+    }
     </style>
     <script>
     // Add icons to sidebar navigation and capitalize Dashboard
@@ -542,6 +559,10 @@ st.markdown("""
             // Biggest Movers icon (trending up)
             else if (textLower.includes('biggest movers') || textLower.includes('biggest_movers') || href.includes('Biggest_Movers') || href.includes('biggest')) {
                 iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>';
+            }
+            // Hedge Calculator icon (calculator)
+            else if (textLower.includes('hedge calculator') || textLower.includes('hedge_calculator') || href.includes('Hedge_Calculator') || href.includes('hedge')) {
+                iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="16" y2="14"></line><line x1="8" y1="18" x2="16" y2="18"></line></svg>';
             }
             
             if (iconSvg) {
