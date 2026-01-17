@@ -12,40 +12,25 @@ st.set_page_config(
 
 # Custom CSS with modern typography and spacing
 st.markdown("""
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
-    
-    * {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    }
-    
-    .main-header, h1, h2, h3, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-        font-family: 'Bebas Neue', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-        letter-spacing: 0.02em !important;
-    }
-    
-    /* Modern typography system - compact */
+    /* Modern typography system */
     .stApp {
-        font-size: 15px;
+        font-size: 16px;
     }
     
     .main-header {
-        font-size: 2.8rem;
-        font-weight: 400;
+        font-size: 3rem;
+        font-weight: 700;
         color: #ffffff;
-        margin-bottom: 0.25rem;
-        letter-spacing: 0.03em;
-        line-height: 1.1;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
     }
     .sub-header {
-        font-size: 1.1rem;
+        font-size: 1.3rem;
         color: rgba(255, 255, 255, 0.7);
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
         font-weight: 400;
-        letter-spacing: 0.01em;
+        letter-spacing: -0.01em;
     }
     
     /* Modern card styling - compact rows */
@@ -163,18 +148,12 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* Constrain main content column width and center it - compact */
+    /* Constrain main content column width and center it */
     .main .block-container {
         max-width: 950px !important;
         margin-left: auto !important;
         margin-right: auto !important;
-        padding-top: 0.5rem !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-    }
-    
-    .element-container {
-        margin-bottom: 0.75rem !important;
+        padding-top: 1rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
