@@ -192,6 +192,121 @@ st.markdown("""
         .stExpander > div {
             padding: 16px !important;
         }
+        
+        /* Mobile sidebar improvements - make it full width and clear */
+        section[data-testid="stSidebar"] {
+            min-width: 100% !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            background-color: rgba(0, 0, 0, 0.6) !important;
+            backdrop-filter: blur(10px) !important;
+            border-right: none !important;
+        }
+        
+        /* Navigation container styling */
+        section[data-testid="stSidebar"] nav {
+            padding: 8px 12px !important;
+        }
+        
+        /* Make navigation items very visible and clear on mobile */
+        section[data-testid="stSidebar"] nav a {
+            color: rgba(255, 255, 255, 0.9) !important;
+            opacity: 1 !important;
+            font-size: 1.15rem !important;
+            font-weight: 500 !important;
+            padding: 16px 18px !important;
+            margin: 6px 0 !important;
+            border-radius: 10px !important;
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            display: flex !important;
+            align-items: center !important;
+            min-height: 52px !important;
+            transition: all 0.2s ease !important;
+            text-decoration: none !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        section[data-testid="stSidebar"] nav a:hover,
+        section[data-testid="stSidebar"] nav a:active {
+            color: #ffffff !important;
+            background-color: rgba(255, 255, 255, 0.15) !important;
+            border-color: rgba(255, 255, 255, 0.25) !important;
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        /* Active navigation item - very prominent on mobile */
+        section[data-testid="stSidebar"] nav a[aria-current="page"],
+        section[data-testid="stSidebar"] nav a[class*="active"] {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15)) !important;
+            border: 2px solid rgba(255, 255, 255, 0.4) !important;
+            font-weight: 700 !important;
+            font-size: 1.2rem !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        /* Make icons larger and more visible on mobile */
+        section[data-testid="stSidebar"] .nav-icon {
+            width: 22px !important;
+            height: 22px !important;
+            margin-right: 14px !important;
+            opacity: 1 !important;
+            flex-shrink: 0 !important;
+        }
+        
+        section[data-testid="stSidebar"] nav a::before {
+            width: 22px !important;
+            height: 22px !important;
+            margin-right: 14px !important;
+            opacity: 1 !important;
+        }
+        
+        /* Sidebar headings - make them stand out */
+        section[data-testid="stSidebar"] h3,
+        section[data-testid="stSidebar"] .stMarkdown h3 {
+            color: rgba(255, 255, 255, 0.95) !important;
+            font-weight: 700 !important;
+            font-size: 1.3rem !important;
+            margin-bottom: 16px !important;
+            margin-top: 12px !important;
+            padding-bottom: 8px !important;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        /* League buttons - more visible on mobile */
+        .stSidebar button[kind="secondary"] {
+            padding: 14px 18px !important;
+            font-size: 1.05rem !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+            background-color: rgba(0, 0, 0, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            min-height: 48px !important;
+            font-weight: 500 !important;
+        }
+        
+        .stSidebar button[kind="primary"] {
+            padding: 14px 18px !important;
+            font-size: 1.05rem !important;
+            font-weight: 700 !important;
+            min-height: 48px !important;
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        }
+        
+        /* Ensure sidebar content is readable */
+        section[data-testid="stSidebar"] .stMarkdown,
+        section[data-testid="stSidebar"] p {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-size: 1rem !important;
+        }
+        
+        /* Ensure navigation text is clear */
+        section[data-testid="stSidebar"] nav a > div {
+            font-weight: inherit !important;
+        }
     }
     
     /* Compact status text */
