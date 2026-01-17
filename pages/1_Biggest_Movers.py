@@ -173,25 +173,26 @@ def get_db_connection():
     """Create database connection"""
     return psycopg2.connect(DATABASE_URL)
 
-def calculate_no_vig_probability(home_odds, draw_odds, away_odds):
-    """Calculate no-vig implied probabilities from decimal odds"""
-    if not all([home_odds, draw_odds, away_odds]):
-        return None, None, None
-    
-    # Calculate implied probabilities (1/odds)
-    home_implied = 1.0 / home_odds
-    draw_implied = 1.0 / draw_odds
-    away_implied = 1.0 / away_odds
-    
-    # Total market margin (vig)
-    total_implied = home_implied + draw_implied + away_implied
-    
-    # Remove vig by normalizing
-    home_no_vig = home_implied / total_implied
-    draw_no_vig = draw_implied / total_implied
-    away_no_vig = away_implied / total_implied
-    
-    return home_no_vig, draw_no_vig, away_no_vig
+# Helper functions for implied probability calculations
+def implied_prob(o):
+    """Calculate implied probability from decimal odds"""
+    if o and o > 1:
+        return 1.0 / o
+    return None
+
+def delta_pp(open_o, now_o):
+    """Calculate percentage point change in implied probability"""
+    open_prob = implied_prob(open_o)
+    now_prob = implied_prob(now_o)
+    if open_prob is not None and now_prob is not None:
+        return (now_prob - open_prob) * 100
+    return None
+
+def delta_odds_pct(open_o, now_o):
+    """Calculate percentage change in odds"""
+    if open_o and open_o > 0 and now_o and now_o > 0:
+        return (now_o / open_o - 1) * 100
+    return None
 
 def get_league_flag_html(league):
     """Get flag as HTML img tag using CDN"""
@@ -266,28 +267,22 @@ def get_biggest_movers():
             opening_home, opening_away, opening_draw, opening_time = opening_row
             latest_home, latest_away, latest_draw, latest_time = latest_row
             
-            # Calculate no-vig probabilities
-            opening_home_nv, opening_draw_nv, opening_away_nv = calculate_no_vig_probability(
-                opening_home, opening_draw, opening_away
-            )
-            latest_home_nv, latest_draw_nv, latest_away_nv = calculate_no_vig_probability(
-                latest_home, latest_draw, latest_away
-            )
+            # Calculate implied probability deltas (Δpp) for each outcome
+            home_delta_pp = delta_pp(opening_home, latest_home)
+            draw_delta_pp = delta_pp(opening_draw, latest_draw)
+            away_delta_pp = delta_pp(opening_away, latest_away)
             
-            if all([opening_home_nv, opening_draw_nv, opening_away_nv, 
-                   latest_home_nv, latest_draw_nv, latest_away_nv]):
-                # Calculate deltas (percentage point change)
-                home_delta = (latest_home_nv - opening_home_nv) * 100
-                draw_delta = (latest_draw_nv - opening_draw_nv) * 100
-                away_delta = (latest_away_nv - opening_away_nv) * 100
-                
-                # Find the largest absolute delta
+            if all([home_delta_pp is not None, draw_delta_pp is not None, away_delta_pp is not None]):
+                # Find the largest absolute delta_pp
                 deltas = [
-                    (abs(home_delta), home_delta, 'Home', opening_home, latest_home),
-                    (abs(draw_delta), draw_delta, 'Draw', opening_draw, latest_draw),
-                    (abs(away_delta), away_delta, 'Away', opening_away, latest_away)
+                    (abs(home_delta_pp), home_delta_pp, 'Home', opening_home, latest_home),
+                    (abs(draw_delta_pp), draw_delta_pp, 'Draw', opening_draw, latest_draw),
+                    (abs(away_delta_pp), away_delta_pp, 'Away', opening_away, latest_away)
                 ]
-                max_abs_delta, signed_delta, outcome, opening_odds, latest_odds = max(deltas, key=lambda x: x[0])
+                max_abs_delta_pp, signed_delta_pp, outcome, opening_odds, latest_odds = max(deltas, key=lambda x: x[0])
+                
+                # Calculate odds percentage change as secondary metric
+                odds_pct_change = delta_odds_pct(opening_odds, latest_odds)
                 
                 # Calculate minutes ago
                 minutes_ago = int((datetime.now() - latest_time).total_seconds() / 60)
@@ -297,8 +292,9 @@ def get_biggest_movers():
                     'home_team': home_team,
                     'away_team': away_team,
                     'outcome': outcome,
-                    'delta_pct': signed_delta,
-                    'abs_delta': max_abs_delta,
+                    'delta_pp': signed_delta_pp,
+                    'abs_delta_pp': max_abs_delta_pp,
+                    'odds_pct_change': odds_pct_change,
                     'opening_odds': opening_odds,
                     'latest_odds': latest_odds,
                     'minutes_ago': minutes_ago
@@ -306,8 +302,8 @@ def get_biggest_movers():
     
     conn.close()
     
-    # Sort by absolute delta descending and return top 10
-    movers.sort(key=lambda x: x['abs_delta'], reverse=True)
+    # Sort by absolute delta_pp descending and return top 10
+    movers.sort(key=lambda x: x['abs_delta_pp'], reverse=True)
     return movers[:10]
 
 # Display Biggest Movers
@@ -319,7 +315,8 @@ if movers:
         home = mover['home_team']
         away = mover['away_team']
         outcome = mover['outcome']
-        delta_pct = mover['delta_pct']
+        delta_pp = mover['delta_pp']
+        odds_pct_change = mover.get('odds_pct_change', None)
         minutes_ago = mover['minutes_ago']
         
         # Get league flag
@@ -330,35 +327,34 @@ if movers:
         opening_odds = mover['opening_odds']
         latest_odds = mover['latest_odds']
         
-        # Format odds change with betting semantics:
-        # - Odds decreased (e.g., 2.20 → 1.90): "Odds shortening" with green text and down arrow (↓)
-        # - Odds increased (e.g., 2.10 → 2.30): "Odds drifting" with red text and up arrow (↑)
-        if latest_odds < opening_odds:
-            # Odds decreased (shortening) - green text, down arrow with gentle upward animation
-            status_text = "Odds shortening"
-            status_color = "#44ff44"  # Green
-            arrow = "↓"
-            arrow_class = "arrow-shortening"
-            odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
-            live_class = "live-shortening"
+        # Format Δpp as primary metric (percentage points)
+        delta_pp_display = f"{delta_pp:+.1f}pp"
+        if delta_pp > 0:
+            delta_color = "#44ff44"  # Green - probability increased
+            delta_arrow = "↑"
         else:
-            # Odds increased (drifting) - red text, up arrow with gentle downward animation
-            status_text = "Odds drifting"
-            status_color = "#ff4444"  # Red
-            arrow = "↑"
-            arrow_class = "arrow-drifting"
-            odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
-            live_class = "live-drifting"
+            delta_color = "#ff4444"  # Red - probability decreased
+            delta_arrow = "↓"
+        
+        # Format odds % change as secondary metric
+        if odds_pct_change is not None:
+            odds_pct_display = f" ({odds_pct_change:+.1f}% odds)"
+        else:
+            odds_pct_display = ""
+        
+        # Format odds display
+        odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
         
         # Check if updated in last 2 minutes for live indicator
         is_live = minutes_ago <= 2
+        live_class = "live-shortening" if delta_pp > 0 else "live-drifting"
         live_indicator = f'<span class="live-indicator {live_class}"></span>' if is_live else ''
         
-        # Create modern card row
+        # Create modern card row with Δpp as primary
         row_html = f"""
         <div class="mover-card">
             <div class="mover-match">{home} vs {away} ({league_flag_html} {league_name})</div>
-            <div class="mover-details">{outcome} · <span style="color: {status_color}; font-weight: 600; font-size: 1.05em;"><span class="{arrow_class}">{arrow}</span> {status_text} ({odds_display}){live_indicator}</span> · Updated {minutes_ago}m ago</div>
+            <div class="mover-details">{outcome} · <span style="color: {delta_color}; font-weight: 600; font-size: 1.05em;">{delta_arrow} {delta_pp_display}{odds_pct_display}</span> ({odds_display}){live_indicator} · Updated {minutes_ago}m ago</div>
         </div>
         """
         st.markdown(row_html, unsafe_allow_html=True)
