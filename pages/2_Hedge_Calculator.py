@@ -101,7 +101,15 @@ st.markdown("""
 
 # Header
 st.markdown('<p class="main-header">💰 Hedge Calculator</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Calculate hedge stakes and profit using decimal odds.</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Calculate optimal hedge stakes and guaranteed profit using decimal odds.</p>', unsafe_allow_html=True)
+
+# Mode selector
+calculation_mode = st.radio(
+    "Calculation Mode",
+    ["Optimal Hedge (Auto)", "Manual Entry"],
+    horizontal=True,
+    help="Optimal Hedge automatically calculates the hedge stake for equal profit. Manual Entry lets you specify all values."
+)
 
 # Input section with two columns (responsive)
 col1, col2 = st.columns(2)
@@ -137,14 +145,50 @@ with col2:
         key="hedge_odds"
     )
     
-    hedge_amount = st.number_input(
-        "Hedge Amount",
-        min_value=0.01,
-        value=None,
-        step=0.01,
-        format="%.2f",
-        key="hedge_amount"
-    )
+    if calculation_mode == "Optimal Hedge (Auto)":
+        # Calculate optimal hedge stake for equal profit
+        if (my_odds is not None and my_odds > 0 and 
+            bet_amount is not None and bet_amount > 0 and 
+            hedge_odds is not None and hedge_odds > 0):
+            
+            # Formula: s2 = (s1 * o1) / o2
+            # This ensures profit_main = profit_hedge
+            optimal_hedge = (bet_amount * my_odds) / hedge_odds
+            # Store in session state for use in calculations
+            st.session_state.hedge_amount_auto = optimal_hedge
+            
+            st.number_input(
+                "Hedge Amount (Auto-calculated)",
+                min_value=0.01,
+                value=optimal_hedge,
+                step=0.01,
+                format="%.2f",
+                key="hedge_amount_display",
+                disabled=True,
+                help=f"Optimal hedge stake: ${optimal_hedge:.2f}"
+            )
+            hedge_amount = optimal_hedge
+        else:
+            hedge_amount = None
+            st.number_input(
+                "Hedge Amount (Auto-calculated)",
+                min_value=0.01,
+                value=None,
+                step=0.01,
+                format="%.2f",
+                key="hedge_amount_display",
+                disabled=True,
+                help="Enter original bet details to calculate optimal hedge"
+            )
+    else:
+        hedge_amount = st.number_input(
+            "Hedge Amount",
+            min_value=0.01,
+            value=None,
+            step=0.01,
+            format="%.2f",
+            key="hedge_amount"
+        )
 
 # Validation
 all_inputs_provided = all([
@@ -174,11 +218,21 @@ if all_inputs_provided:
     # Guaranteed profit (worst case)
     guaranteed_profit = min(profit_main, profit_hedge)
     
+    # Additional metrics
+    total_return_main = s1 * o1  # Total return if original wins
+    total_return_hedge = s2 * o2  # Total return if hedge wins
+    roi = (guaranteed_profit / total_staked) * 100 if total_staked > 0 else 0
+    
+    # Check if profits are equal (optimal hedge)
+    profit_difference = abs(profit_main - profit_hedge)
+    is_optimal = profit_difference < 0.01  # Consider equal if within 1 cent
+    
     # Format values to 2 decimal places
     total_staked_str = f"{total_staked:.2f}"
     profit_main_str = f"{profit_main:.2f}"
     profit_hedge_str = f"{profit_hedge:.2f}"
     guaranteed_profit_str = f"{guaranteed_profit:.2f}"
+    roi_str = f"{roi:.2f}"
     
     # Determine color classes for profit values
     def get_profit_class(value):
@@ -192,11 +246,14 @@ if all_inputs_provided:
     profit_main_class = get_profit_class(profit_main)
     profit_hedge_class = get_profit_class(profit_hedge)
     guaranteed_profit_class = get_profit_class(guaranteed_profit)
+    roi_class = get_profit_class(roi)
     
     # Display results card
+    optimal_badge = '<span style="color: #44ff44; font-size: 0.85rem; font-weight: 600; margin-left: 8px;">✓ Optimal</span>' if is_optimal else ''
+    
     results_html = f"""
     <div class="hedge-results-card">
-        <h3 style="color: #ffffff; margin-top: 0; margin-bottom: 16px; font-size: 1.3rem; font-weight: 600;">Results</h3>
+        <h3 style="color: #ffffff; margin-top: 0; margin-bottom: 16px; font-size: 1.3rem; font-weight: 600;">Results{optimal_badge}</h3>
         <div class="result-row">
             <span class="result-label">Total Staked</span>
             <span class="result-value zero">${total_staked_str}</span>
@@ -213,9 +270,17 @@ if all_inputs_provided:
             <span class="result-label">Guaranteed profit (worst case)</span>
             <span class="result-value {guaranteed_profit_class}">${guaranteed_profit_str}</span>
         </div>
+        <div class="result-row">
+            <span class="result-label">ROI (on total stake)</span>
+            <span class="result-value {roi_class}">{roi_str}%</span>
+        </div>
     </div>
     """
     st.markdown(results_html, unsafe_allow_html=True)
+    
+    # Show additional info for optimal hedge
+    if is_optimal and calculation_mode == "Optimal Hedge (Auto)":
+        st.success(f"✓ Equal profit hedge: Both outcomes yield ${guaranteed_profit:.2f} profit regardless of result.")
     
 elif any([
     my_odds is not None and my_odds <= 0,
@@ -227,7 +292,10 @@ elif any([
     st.warning("Please ensure all odds and amounts are positive numbers.")
 else:
     # Not all inputs provided yet
-    st.info("Enter all four values to calculate hedge results.")
+    if calculation_mode == "Optimal Hedge (Auto)":
+        st.info("💡 Enter your original bet (odds and amount) and the hedge odds to automatically calculate the optimal hedge stake for equal profit.")
+    else:
+        st.info("Enter all four values to calculate hedge results.")
 
 # Footer
 st.markdown("---")
