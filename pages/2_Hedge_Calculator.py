@@ -10,32 +10,47 @@ st.set_page_config(
 
 # Custom CSS for consistent styling with the rest of the app
 st.markdown("""
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-    /* Modern typography system */
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+    
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .main-header, h1, h2, h3, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        font-family: 'Bebas Neue', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        letter-spacing: 0.02em !important;
+    }
+    
+    /* Modern typography system - compact */
     .stApp {
-        font-size: 16px;
+        font-size: 15px;
     }
     
     .main-header {
-        font-size: 3rem;
-        font-weight: 700;
+        font-size: 2.8rem;
+        font-weight: 400;
         color: #ffffff;
-        margin-bottom: 0.5rem;
-        letter-spacing: -0.02em;
+        margin-bottom: 0.25rem;
+        letter-spacing: 0.03em;
+        line-height: 1.1;
     }
     .sub-header {
-        font-size: 1.3rem;
+        font-size: 1.1rem;
         color: rgba(255, 255, 255, 0.7);
-        margin-bottom: 3rem;
+        margin-bottom: 1rem;
         font-weight: 400;
-        letter-spacing: -0.01em;
+        letter-spacing: 0.01em;
     }
     
-    /* Results card styling */
+    /* Results card styling - compact */
     .hedge-results-card {
-        padding: 24px;
-        margin-top: 2rem;
-        border-radius: 14px;
+        padding: 18px 20px;
+        margin-top: 1rem;
+        border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         background-color: rgba(0, 0, 0, 0.25);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -77,24 +92,26 @@ st.markdown("""
         color: rgba(255, 255, 255, 0.9);
     }
     
-    /* Constrain main content column width and center it */
+    /* Constrain main content column width and center it - compact */
     .main .block-container {
         max-width: 900px !important;
         margin-left: auto !important;
         margin-right: auto !important;
-        padding-top: 1rem !important;
+        padding-top: 0.5rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
     }
     
     /* Remove heavy dividers */
     hr {
         border: none;
         border-top: 1px solid rgba(255, 255, 255, 0.05);
-        margin: 2.5rem 0;
+        margin: 1.5rem 0;
     }
     
-    /* Increase spacing between sections */
+    /* Compact spacing between sections */
     .element-container {
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.75rem;
     }
     </style>
 """, unsafe_allow_html=True)

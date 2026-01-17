@@ -15,35 +15,52 @@ st.set_page_config(
 
 # Custom CSS for branding and segmented control with modern typography
 st.markdown("""
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-    /* Modern typography system */
+    /* Import Bebas Neue font */
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+    
+    /* Apply Bebas Neue to headers, Inter for body */
+    * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .main-header, h1, h2, h3, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        font-family: 'Bebas Neue', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        letter-spacing: 0.02em !important;
+    }
+    
+    /* Modern typography system - compact */
     .stApp {
-        font-size: 16px;
+        font-size: 15px;
     }
     
     .main-header {
-        font-size: 3rem;
-        font-weight: 700;
+        font-size: 2.8rem;
+        font-weight: 400;
         color: #ffffff;
-        margin-bottom: 0.5rem;
-        letter-spacing: -0.02em;
+        margin-bottom: 0.25rem;
+        letter-spacing: 0.03em;
+        line-height: 1.1;
     }
     .sub-header {
-        font-size: 1.3rem;
+        font-size: 1.1rem;
         color: rgba(255, 255, 255, 0.7);
-        margin-bottom: 3rem;
+        margin-bottom: 1.5rem;
         font-weight: 400;
-        letter-spacing: -0.01em;
+        letter-spacing: 0.01em;
     }
     
-    /* Modern expander/card styling */
+    /* Modern expander/card styling - compact */
     .stExpander {
-        margin-bottom: 16px;
+        margin-bottom: 10px;
     }
     
     .stExpander summary {
-        padding: 16px 20px !important;
-        border-radius: 14px !important;
+        padding: 12px 16px !important;
+        border-radius: 10px !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         background-color: rgba(0, 0, 0, 0.25) !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
@@ -56,11 +73,11 @@ st.markdown("""
     }
     
     .stExpander > div {
-        border-radius: 0 0 14px 14px !important;
+        border-radius: 0 0 10px 10px !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-top: none !important;
         background-color: rgba(0, 0, 0, 0.15) !important;
-        padding: 20px 24px !important;
+        padding: 14px 18px !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
     }
     
@@ -68,21 +85,22 @@ st.markdown("""
     hr {
         border: none;
         border-top: 1px solid rgba(255, 255, 255, 0.05);
-        margin: 2.5rem 0;
+        margin: 1.5rem 0;
     }
     
-    /* Increase spacing between sections */
+    /* Compact spacing between sections */
     .element-container {
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
     }
     
-    /* Modern subheader styling */
+    /* Modern subheader styling - compact */
     h3 {
-        font-size: 1.5rem !important;
-        font-weight: 600 !important;
-        letter-spacing: -0.01em !important;
-        margin-bottom: 1.5rem !important;
-        margin-top: 2rem !important;
+        font-size: 1.4rem !important;
+        font-weight: 400 !important;
+        letter-spacing: 0.02em !important;
+        margin-bottom: 0.75rem !important;
+        margin-top: 1rem !important;
+        font-family: 'Bebas Neue', sans-serif !important;
     }
     
     /* Modern table styling */
@@ -182,15 +200,27 @@ st.markdown("""
         /* Adjust header for mobile */
         .main-header {
             font-size: 2rem !important;
+            margin-bottom: 0.25rem !important;
         }
         
         .sub-header {
-            font-size: 1.1rem !important;
+            font-size: 1rem !important;
+            margin-bottom: 1rem !important;
         }
         
         /* Adjust expander padding for mobile */
         .stExpander > div {
-            padding: 16px !important;
+            padding: 12px !important;
+        }
+        
+        /* Compact mobile spacing */
+        .element-container {
+            margin-bottom: 0.75rem !important;
+        }
+        
+        h3 {
+            margin-top: 0.75rem !important;
+            margin-bottom: 0.5rem !important;
         }
         
         /* Mobile sidebar improvements - make it full width and clear */
@@ -319,10 +349,12 @@ st.markdown("""
         padding-top: 0;
     }
     
-    /* Constrain main content column width and center it */
+    /* Constrain main content column width and center it - compact */
     .main .block-container {
-        padding-top: 1rem !important;
-        max-width: 1150px !important;
+        padding-top: 0.5rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        max-width: 1200px !important;
         margin-left: auto !important;
         margin-right: auto !important;
     }
@@ -333,11 +365,52 @@ st.markdown("""
         padding-top: 0 !important;
     }
     
-    /* Biggest Movers card styling */
+    /* Reduce Streamlit default padding */
+    .main .block-container > div {
+        padding-top: 0.5rem !important;
+    }
+    
+    /* Compact header section */
+    header[data-testid="stHeader"] {
+        padding: 0.5rem 1rem !important;
+    }
+    
+    /* Compact subheaders (date headers) */
+    .stSubheader {
+        margin-top: 1rem !important;
+        margin-bottom: 0.5rem !important;
+        font-family: 'Bebas Neue', sans-serif !important;
+        font-size: 1.3rem !important;
+        letter-spacing: 0.02em !important;
+    }
+    
+    /* Reduce spacing in columns */
+    .stColumn {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* Compact status text */
+    .status-text {
+        margin-top: 0.25rem !important;
+        margin-bottom: 0 !important;
+    }
+    
+    /* Reduce spacing around markdown breaks */
+    .stMarkdown br {
+        line-height: 0.5 !important;
+    }
+    
+    /* Compact spacing in main content area */
+    .main .block-container > div {
+        padding-bottom: 0.5rem !important;
+    }
+    
+    /* Biggest Movers card styling - compact */
     .mover-card {
-        padding: 20px 24px;
-        margin-bottom: 16px;
-        border-radius: 14px;
+        padding: 14px 18px;
+        margin-bottom: 10px;
+        border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         background-color: rgba(0, 0, 0, 0.25);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -352,19 +425,19 @@ st.markdown("""
     }
     
     .mover-match {
-        font-size: 1.15rem;
-        font-weight: 600;
+        font-size: 1.1rem;
+        font-weight: 500;
         color: #ffffff;
-        margin-bottom: 8px;
-        letter-spacing: -0.01em;
+        margin-bottom: 6px;
+        letter-spacing: 0.01em;
     }
     
     .mover-details {
         color: rgba(255, 255, 255, 0.75);
-        font-size: 0.95rem;
-        margin-top: 6px;
+        font-size: 0.9rem;
+        margin-top: 4px;
         display: inline-block;
-        line-height: 1.6;
+        line-height: 1.5;
     }
     
     /* Ensure flag emojis render properly */
