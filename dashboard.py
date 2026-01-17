@@ -768,6 +768,14 @@ def delta_odds_pct(open_o, now_o):
         return (now_o / open_o - 1) * 100
     return None
 
+def implied_prob_pct_change(open_o, now_o):
+    """Calculate percentage change in implied probability (not percentage points)"""
+    open_prob = implied_prob(open_o)
+    now_prob = implied_prob(now_o)
+    if open_prob is not None and now_prob is not None and open_prob > 0:
+        return ((now_prob - open_prob) / open_prob) * 100
+    return None
+
 def load_latest_odds():
     """Load the most recent odds for each match (next 3 days only)"""
     conn = get_db_connection()
@@ -887,18 +895,18 @@ def calculate_no_vig_probability(home_odds, draw_odds, away_odds):
     return home_no_vig, draw_no_vig, away_no_vig
 
 def get_biggest_movers():
-    """Get the top 10 matches with largest absolute implied probability changes (Δpp)"""
+    """Get the top 10 matches with largest absolute implied probability changes"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
     # Get all unique matches from last 24 hours
+    # Exclude finished and in-play matches - only include future matches (commence_time > NOW)
     query = """
     SELECT DISTINCT league, home_team, away_team, bookmaker
     FROM odds
     WHERE timestamp >= NOW() - INTERVAL '24 hours'
       AND commence_time IS NOT NULL 
-      AND commence_time >= CURRENT_DATE 
-      AND commence_time < CURRENT_DATE + INTERVAL '3 days'
+      AND commence_time > NOW()
     """
     
     cursor.execute(query)
@@ -957,8 +965,8 @@ def get_biggest_movers():
                 ]
                 max_abs_delta_pp, signed_delta_pp, outcome, opening_odds, latest_odds = max(deltas, key=lambda x: x[0])
                 
-                # Calculate odds percentage change as secondary metric
-                odds_pct_change = delta_odds_pct(opening_odds, latest_odds)
+                # Calculate implied probability percentage change for display (not percentage points)
+                prob_pct_change = implied_prob_pct_change(opening_odds, latest_odds)
                 
                 # Calculate minutes ago
                 minutes_ago = int((datetime.now() - latest_time).total_seconds() / 60)
@@ -968,9 +976,9 @@ def get_biggest_movers():
                     'home_team': home_team,
                     'away_team': away_team,
                     'outcome': outcome,
-                    'delta_pp': signed_delta_pp,
-                    'abs_delta_pp': max_abs_delta_pp,
-                    'odds_pct_change': odds_pct_change,
+                    'delta_pp': signed_delta_pp,  # Keep for internal ranking
+                    'abs_delta_pp': max_abs_delta_pp,  # Keep for internal ranking
+                    'prob_pct_change': prob_pct_change,  # For display
                     'opening_odds': opening_odds,
                     'latest_odds': latest_odds,
                     'minutes_ago': minutes_ago
@@ -1142,57 +1150,63 @@ else:
                         # Get opening odds for this bookmaker
                         opening = get_opening_odds(league, home, away, bookmaker)
                         
-                        # Format Home odds with Open, Current, and Δpp
+                        # Format Home odds with Open, Current, and implied probability change
                         if opening:
-                            home_delta_pp = delta_pp(opening['home_odds'], home_odds)
-                            home_odds_pct = delta_odds_pct(opening['home_odds'], home_odds)
-                            if home_delta_pp is not None:
-                                home_pp_color = "#44ff44" if home_delta_pp > 0 else "#ff4444"
-                                home_pp_arrow = "↑" if home_delta_pp > 0 else "↓"
-                                home_pp_display = f"<span style='color: {home_pp_color}; font-weight: bold;'>{home_pp_arrow} {home_delta_pp:+.1f}pp</span>"
-                                if home_odds_pct is not None:
-                                    home_odds_pct_display = f" <span style='color: rgba(255,255,255,0.6); font-size: 0.9em;'>({home_odds_pct:+.1f}%)</span>"
+                            home_prob_pct = implied_prob_pct_change(opening['home_odds'], home_odds)
+                            if home_prob_pct is not None:
+                                # Determine shortened/drifted
+                                if home_odds < opening['home_odds']:
+                                    home_movement = "shortened"
+                                    home_color = "#44ff44"  # Green
+                                    home_arrow = "↓"
                                 else:
-                                    home_odds_pct_display = ""
-                                home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} {home_pp_display}{home_odds_pct_display}"
+                                    home_movement = "drifted"
+                                    home_color = "#ff4444"  # Red
+                                    home_arrow = "↑"
+                                home_prob_display = f"<span style='color: {home_color}; font-weight: bold;'>{home_arrow} {home_prob_pct:+.1f}%</span>"
+                                home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} ({home_movement}) {home_prob_display}"
                             else:
-                                home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} (— 0.0pp)"
+                                home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f}"
                         else:
                             home_display = f"{home_odds:.2f} (No opening data)"
                         
-                        # Format Draw odds with Open, Current, and Δpp
+                        # Format Draw odds with Open, Current, and implied probability change
                         if opening:
-                            draw_delta_pp = delta_pp(opening['draw_odds'], draw_odds)
-                            draw_odds_pct = delta_odds_pct(opening['draw_odds'], draw_odds)
-                            if draw_delta_pp is not None:
-                                draw_pp_color = "#44ff44" if draw_delta_pp > 0 else "#ff4444"
-                                draw_pp_arrow = "↑" if draw_delta_pp > 0 else "↓"
-                                draw_pp_display = f"<span style='color: {draw_pp_color}; font-weight: bold;'>{draw_pp_arrow} {draw_delta_pp:+.1f}pp</span>"
-                                if draw_odds_pct is not None:
-                                    draw_odds_pct_display = f" <span style='color: rgba(255,255,255,0.6); font-size: 0.9em;'>({draw_odds_pct:+.1f}%)</span>"
+                            draw_prob_pct = implied_prob_pct_change(opening['draw_odds'], draw_odds)
+                            if draw_prob_pct is not None:
+                                # Determine shortened/drifted
+                                if draw_odds < opening['draw_odds']:
+                                    draw_movement = "shortened"
+                                    draw_color = "#44ff44"  # Green
+                                    draw_arrow = "↓"
                                 else:
-                                    draw_odds_pct_display = ""
-                                draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} {draw_pp_display}{draw_odds_pct_display}"
+                                    draw_movement = "drifted"
+                                    draw_color = "#ff4444"  # Red
+                                    draw_arrow = "↑"
+                                draw_prob_display = f"<span style='color: {draw_color}; font-weight: bold;'>{draw_arrow} {draw_prob_pct:+.1f}%</span>"
+                                draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} ({draw_movement}) {draw_prob_display}"
                             else:
-                                draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} (— 0.0pp)"
+                                draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f}"
                         else:
                             draw_display = f"{draw_odds:.2f} (No opening data)"
                         
-                        # Format Away odds with Open, Current, and Δpp
+                        # Format Away odds with Open, Current, and implied probability change
                         if opening:
-                            away_delta_pp = delta_pp(opening['away_odds'], away_odds)
-                            away_odds_pct = delta_odds_pct(opening['away_odds'], away_odds)
-                            if away_delta_pp is not None:
-                                away_pp_color = "#44ff44" if away_delta_pp > 0 else "#ff4444"
-                                away_pp_arrow = "↑" if away_delta_pp > 0 else "↓"
-                                away_pp_display = f"<span style='color: {away_pp_color}; font-weight: bold;'>{away_pp_arrow} {away_delta_pp:+.1f}pp</span>"
-                                if away_odds_pct is not None:
-                                    away_odds_pct_display = f" <span style='color: rgba(255,255,255,0.6); font-size: 0.9em;'>({away_odds_pct:+.1f}%)</span>"
+                            away_prob_pct = implied_prob_pct_change(opening['away_odds'], away_odds)
+                            if away_prob_pct is not None:
+                                # Determine shortened/drifted
+                                if away_odds < opening['away_odds']:
+                                    away_movement = "shortened"
+                                    away_color = "#44ff44"  # Green
+                                    away_arrow = "↓"
                                 else:
-                                    away_odds_pct_display = ""
-                                away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} {away_pp_display}{away_odds_pct_display}"
+                                    away_movement = "drifted"
+                                    away_color = "#ff4444"  # Red
+                                    away_arrow = "↑"
+                                away_prob_display = f"<span style='color: {away_color}; font-weight: bold;'>{away_arrow} {away_prob_pct:+.1f}%</span>"
+                                away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} ({away_movement}) {away_prob_display}"
                             else:
-                                away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} (— 0.0pp)"
+                                away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f}"
                         else:
                             away_display = f"{away_odds:.2f} (No opening data)"
                         
