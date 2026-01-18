@@ -1,6 +1,6 @@
 import streamlit as st
 import psycopg2
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import pandas as pd
 import plotly.graph_objects as go
@@ -862,6 +862,34 @@ def implied_prob_pct_change(open_o, now_o):
         return ((now_prob - open_prob) / open_prob) * 100
     return None
 
+def is_pre_match(commence_time):
+    """Check if a match is still pre-match (kickoff is more than 5 minutes away)
+    
+    Args:
+        commence_time: datetime object (timezone-aware or naive)
+    
+    Returns:
+        bool: True if match is pre-match, False if match has started or is within 5 minutes
+    """
+    if commence_time is None:
+        return False  # No kickoff time means we can't determine, exclude it
+    
+    # Get current time in UTC
+    now_utc = datetime.now(timezone.utc)
+    
+    # Ensure commence_time is timezone-aware (assume UTC if naive)
+    if commence_time.tzinfo is None:
+        commence_time = commence_time.replace(tzinfo=timezone.utc)
+    else:
+        # Convert to UTC if it has timezone info
+        commence_time = commence_time.astimezone(timezone.utc)
+    
+    # Define cutoff: now + 5 minutes
+    cutoff_time = now_utc + timedelta(minutes=5)
+    
+    # Match is pre-match if kickoff > cutoff_time
+    return commence_time > cutoff_time
+
 def load_latest_odds():
     """Load the most recent odds for each match (next 3 days only)"""
     conn = get_db_connection()
@@ -1238,10 +1266,15 @@ for league in [None] + SUPPORTED_LEAGUES:
 # Get the selected league value
 selected_league = st.session_state.selected_league
 
-# Update status text
+# Update status text (using UTC)
 if odds_data:
+    now_utc = datetime.now(timezone.utc)
     latest_update = max(row[7] for row in odds_data)
-    minutes_ago = int((datetime.now() - latest_update).total_seconds() / 60)
+    if latest_update.tzinfo is None:
+        latest_update_utc = latest_update.replace(tzinfo=timezone.utc)
+    else:
+        latest_update_utc = latest_update.astimezone(timezone.utc)
+    minutes_ago = int((now_utc - latest_update_utc).total_seconds() / 60)
     status_placeholder.markdown(f'<div class="status-text">Feed active · updated {minutes_ago}m ago</div>', unsafe_allow_html=True)
 else:
     status_placeholder.markdown('<div class="status-text">Feed active · no data</div>', unsafe_allow_html=True)
@@ -1280,7 +1313,7 @@ else:
         matches_by_date[match_date][key].append(row)
     
     # Filter to show only today's matches for compact tape view
-    today = datetime.now().date()
+    today = datetime.now(timezone.utc).date()
     if today in matches_by_date:
         st.markdown("### Today's Tape")
         
@@ -1296,14 +1329,23 @@ else:
             commence_time = latest_row[8] if latest_row[8] else None
             timestamp = latest_row[7]
             
+            # Apply pre-match filter: exclude matches that have started or are within 5 minutes
+            if not is_pre_match(commence_time):
+                continue
+            
             # Format kickoff time
             if commence_time:
                 kickoff_str = commence_time.strftime('%H:%M')
             else:
                 kickoff_str = "—"
             
-            # Calculate minutes ago
-            minutes_ago_val = int((datetime.now() - timestamp).total_seconds() / 60)
+            # Calculate minutes ago (using UTC)
+            now_utc = datetime.now(timezone.utc)
+            if timestamp.tzinfo is None:
+                timestamp_utc = timestamp.replace(tzinfo=timezone.utc)
+            else:
+                timestamp_utc = timestamp.astimezone(timezone.utc)
+            minutes_ago_val = int((now_utc - timestamp_utc).total_seconds() / 60)
             if minutes_ago_val < 1:
                 updated_str = "just now"
             else:
@@ -1403,8 +1445,15 @@ else:
             match_info, selected_match_data = st.session_state.match_data_cache[st.session_state.selected_match]
             league, home, away = match_info
             
-            st.markdown("---")
-            st.markdown(f"### {home} vs {away} ({league})")
+            # Check if match has started
+            commence_time = selected_match_data[0][8] if selected_match_data[0][8] else None
+            if not is_pre_match(commence_time):
+                st.markdown("---")
+                st.markdown(f"### {home} vs {away} ({league})")
+                st.warning("This match has started and is no longer tracked.")
+            else:
+                st.markdown("---")
+                st.markdown(f"### {home} vs {away} ({league})")
             
             # Display full match detail view
             league_flag_html = get_league_flag(league)

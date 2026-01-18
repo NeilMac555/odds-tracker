@@ -1,6 +1,6 @@
 import streamlit as st
 import psycopg2
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 
 # Page configuration
@@ -262,6 +262,34 @@ def implied_prob_pct_change(open_o, now_o):
         return ((now_prob - open_prob) / open_prob) * 100
     return None
 
+def is_pre_match(commence_time):
+    """Check if a match is still pre-match (kickoff is more than 5 minutes away)
+    
+    Args:
+        commence_time: datetime object (timezone-aware or naive)
+    
+    Returns:
+        bool: True if match is pre-match, False if match has started or is within 5 minutes
+    """
+    if commence_time is None:
+        return False  # No kickoff time means we can't determine, exclude it
+    
+    # Get current time in UTC
+    now_utc = datetime.now(timezone.utc)
+    
+    # Ensure commence_time is timezone-aware (assume UTC if naive)
+    if commence_time.tzinfo is None:
+        commence_time = commence_time.replace(tzinfo=timezone.utc)
+    else:
+        # Convert to UTC if it has timezone info
+        commence_time = commence_time.astimezone(timezone.utc)
+    
+    # Define cutoff: now + 5 minutes
+    cutoff_time = now_utc + timedelta(minutes=5)
+    
+    # Match is pre-match if kickoff > cutoff_time
+    return commence_time > cutoff_time
+
 def get_league_flag_html(league):
     """Get flag as HTML img tag using CDN"""
     LEAGUE_COUNTRY_CODES = {
@@ -287,39 +315,63 @@ def get_biggest_movers(time_window=None):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Calculate the cutoff time if window is specified
+    # Calculate the cutoff time if window is specified (using UTC)
+    now_utc = datetime.now(timezone.utc)
+    cutoff_pre_match = now_utc + timedelta(minutes=5)  # 5 minutes buffer
+    
     if time_window is None:
         # "Since Open" - use all history, but still filter for recent matches only
         cutoff_time = None
     else:
-        cutoff_time = datetime.now() - time_window
+        cutoff_time = now_utc - time_window
     
     # Get all unique matches within the window
-    # Exclude finished and in-play matches - only include future matches (commence_time > NOW)
+    # Exclude finished and in-play matches - only include pre-match (commence_time > NOW + 5 minutes)
     if time_window is None:
         query = """
         SELECT DISTINCT league, home_team, away_team, bookmaker
         FROM odds
         WHERE timestamp >= NOW() - INTERVAL '7 days'
           AND commence_time IS NOT NULL 
-          AND commence_time > NOW()
+          AND commence_time > %s
         """
-        cursor.execute(query)
+        cursor.execute(query, (cutoff_pre_match,))
     else:
         query = """
         SELECT DISTINCT league, home_team, away_team, bookmaker
         FROM odds
         WHERE timestamp >= %s
           AND commence_time IS NOT NULL 
-          AND commence_time > NOW()
+          AND commence_time > %s
         """
-        cursor.execute(query, (cutoff_time,))
+        cursor.execute(query, (cutoff_time, cutoff_pre_match))
     
     matches = cursor.fetchall()
     
     movers = []
     
     for league, home_team, away_team, bookmaker in matches:
+        # Get commence_time for this match to verify it's still pre-match
+        commence_query = """
+        SELECT commence_time
+        FROM odds
+        WHERE league = %s 
+          AND home_team = %s 
+          AND away_team = %s
+          AND bookmaker = %s
+          AND commence_time IS NOT NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+        """
+        cursor.execute(commence_query, (league, home_team, away_team, bookmaker))
+        commence_row = cursor.fetchone()
+        
+        if commence_row:
+            commence_time = commence_row[0]
+            # Double-check pre-match status (in case database query didn't catch it)
+            if not is_pre_match(commence_time):
+                continue
+        
         # Get opening odds (first within the window, or earliest if "Since Open")
         if time_window is None:
             opening_query = """
@@ -400,8 +452,13 @@ def get_biggest_movers(time_window=None):
                 # Calculate implied probability percentage change for display (not percentage points)
                 prob_pct_change = implied_prob_pct_change(opening_odds, latest_odds)
                 
-                # Calculate minutes ago
-                minutes_ago = int((datetime.now() - latest_time).total_seconds() / 60)
+                # Calculate minutes ago (using UTC)
+                now_utc = datetime.now(timezone.utc)
+                if latest_time.tzinfo is None:
+                    latest_time_utc = latest_time.replace(tzinfo=timezone.utc)
+                else:
+                    latest_time_utc = latest_time.astimezone(timezone.utc)
+                minutes_ago = int((now_utc - latest_time_utc).total_seconds() / 60)
                 
                 movers.append({
                     'league': league,
