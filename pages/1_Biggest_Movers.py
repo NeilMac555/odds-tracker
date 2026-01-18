@@ -1,6 +1,6 @@
 import streamlit as st
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 # Page configuration
@@ -198,7 +198,21 @@ st.markdown("""
 
 # Hero Header Section
 st.markdown('<p class="main-header">📊 Biggest Movers</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Top 10 matches with largest odds movement (Last 24h)</p>', unsafe_allow_html=True)
+
+# Time window selector
+time_window_options = ["1h", "3h", "6h", "24h", "Since Open"]
+selected_window = st.selectbox("Time Window", time_window_options, index=2)  # Default to "6h" (index 2)
+
+# Convert time window to timedelta and subtitle text
+if selected_window == "Since Open":
+    window_timedelta = None  # Special case - use all history
+    window_label = "Since Open"
+else:
+    hours = int(selected_window.replace("h", ""))
+    window_timedelta = timedelta(hours=hours)
+    window_label = f"Last {selected_window}"
+
+st.markdown(f'<p class="sub-header">Top 10 matches with largest odds movement ({window_label})</p>', unsafe_allow_html=True)
 
 # Database connection
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -256,57 +270,105 @@ def get_league_flag_html(league):
         return f'<img src="{flag_url}" alt="{country_code}" style="width: 20px; height: 15px; vertical-align: middle; margin-right: 4px; border: 1px solid rgba(255,255,255,0.2);">'
     return '⚽'
 
-def get_biggest_movers():
-    """Get the top 10 matches with largest absolute no-vig probability changes"""
+def get_biggest_movers(time_window=None):
+    """Get the top 10 matches with largest absolute no-vig probability changes
+    
+    Args:
+        time_window: timedelta object for time window, or None for "Since Open"
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Get all unique matches from last 24 hours
-    # Exclude finished and in-play matches - only include future matches (commence_time > NOW)
-    query = """
-    SELECT DISTINCT league, home_team, away_team, bookmaker
-    FROM odds
-    WHERE timestamp >= NOW() - INTERVAL '24 hours'
-      AND commence_time IS NOT NULL 
-      AND commence_time > NOW()
-    """
+    # Calculate the cutoff time if window is specified
+    if time_window is None:
+        # "Since Open" - use all history, but still filter for recent matches only
+        cutoff_time = None
+    else:
+        cutoff_time = datetime.now() - time_window
     
-    cursor.execute(query)
+    # Get all unique matches within the window
+    # Exclude finished and in-play matches - only include future matches (commence_time > NOW)
+    if time_window is None:
+        query = """
+        SELECT DISTINCT league, home_team, away_team, bookmaker
+        FROM odds
+        WHERE timestamp >= NOW() - INTERVAL '7 days'
+          AND commence_time IS NOT NULL 
+          AND commence_time > NOW()
+        """
+        cursor.execute(query)
+    else:
+        query = """
+        SELECT DISTINCT league, home_team, away_team, bookmaker
+        FROM odds
+        WHERE timestamp >= %s
+          AND commence_time IS NOT NULL 
+          AND commence_time > NOW()
+        """
+        cursor.execute(query, (cutoff_time,))
+    
     matches = cursor.fetchall()
     
     movers = []
     
     for league, home_team, away_team, bookmaker in matches:
-        # Get opening odds (first in last 24h)
-        opening_query = """
-        SELECT home_odds, away_odds, draw_odds, timestamp
-        FROM odds
-        WHERE league = %s 
-          AND home_team = %s 
-          AND away_team = %s
-          AND bookmaker = %s
-          AND timestamp >= NOW() - INTERVAL '24 hours'
-        ORDER BY timestamp ASC
-        LIMIT 1
-        """
+        # Get opening odds (first within the window, or earliest if "Since Open")
+        if time_window is None:
+            opening_query = """
+            SELECT home_odds, away_odds, draw_odds, timestamp
+            FROM odds
+            WHERE league = %s 
+              AND home_team = %s 
+              AND away_team = %s
+              AND bookmaker = %s
+            ORDER BY timestamp ASC
+            LIMIT 1
+            """
+            cursor.execute(opening_query, (league, home_team, away_team, bookmaker))
+        else:
+            opening_query = """
+            SELECT home_odds, away_odds, draw_odds, timestamp
+            FROM odds
+            WHERE league = %s 
+              AND home_team = %s 
+              AND away_team = %s
+              AND bookmaker = %s
+              AND timestamp >= %s
+            ORDER BY timestamp ASC
+            LIMIT 1
+            """
+            cursor.execute(opening_query, (league, home_team, away_team, bookmaker, cutoff_time))
         
-        cursor.execute(opening_query, (league, home_team, away_team, bookmaker))
         opening_row = cursor.fetchone()
         
-        # Get latest odds
-        latest_query = """
-        SELECT home_odds, away_odds, draw_odds, timestamp
-        FROM odds
-        WHERE league = %s 
-          AND home_team = %s 
-          AND away_team = %s
-          AND bookmaker = %s
-          AND timestamp >= NOW() - INTERVAL '24 hours'
-        ORDER BY timestamp DESC
-        LIMIT 1
-        """
+        # Get latest odds (must be within the window)
+        if time_window is None:
+            latest_query = """
+            SELECT home_odds, away_odds, draw_odds, timestamp
+            FROM odds
+            WHERE league = %s 
+              AND home_team = %s 
+              AND away_team = %s
+              AND bookmaker = %s
+              AND timestamp >= NOW() - INTERVAL '7 days'
+            ORDER BY timestamp DESC
+            LIMIT 1
+            """
+            cursor.execute(latest_query, (league, home_team, away_team, bookmaker))
+        else:
+            latest_query = """
+            SELECT home_odds, away_odds, draw_odds, timestamp
+            FROM odds
+            WHERE league = %s 
+              AND home_team = %s 
+              AND away_team = %s
+              AND bookmaker = %s
+              AND timestamp >= %s
+            ORDER BY timestamp DESC
+            LIMIT 1
+            """
+            cursor.execute(latest_query, (league, home_team, away_team, bookmaker, cutoff_time))
         
-        cursor.execute(latest_query, (league, home_team, away_team, bookmaker))
         latest_row = cursor.fetchone()
         
         if opening_row and latest_row:
@@ -353,7 +415,7 @@ def get_biggest_movers():
     return movers[:10]
 
 # Display Biggest Movers
-movers = get_biggest_movers()
+movers = get_biggest_movers(window_timedelta)
 
 if movers:
     for i, mover in enumerate(movers):
