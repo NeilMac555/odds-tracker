@@ -68,6 +68,44 @@ st.markdown("""
         line-height: 1.4;
     }
     
+    .mover-line-primary {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 4px;
+        line-height: 1.4;
+    }
+    
+    .mover-line-secondary {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        line-height: 1.4;
+    }
+    
+    .strength-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-left: 6px;
+        vertical-align: middle;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .strength-badge.strong {
+        background-color: rgba(255, 100, 100, 0.2);
+        color: #ff6464;
+        border: 1px solid rgba(255, 100, 100, 0.3);
+    }
+    
+    .strength-badge.medium {
+        background-color: rgba(255, 200, 100, 0.2);
+        color: #ffc864;
+        border: 1px solid rgba(255, 200, 100, 0.3);
+    }
+    
     /* Subtle animated arrow indicators */
     @keyframes gentleMoveUp {
         0%, 100% {
@@ -336,46 +374,57 @@ if movers:
         if latest_odds < opening_odds:
             movement_text = "shortened"
             movement_color = "#44ff44"  # Green
-            movement_arrow = "↓"
-            live_class = "live-shortening"
         else:
             movement_text = "drifted"
             movement_color = "#ff4444"  # Red
-            movement_arrow = "↑"
-            live_class = "live-drifting"
-        
-        # Format odds display: before → after
-        odds_display = f"{opening_odds:.2f} → {latest_odds:.2f}"
-        
-        # Format implied probability change as percentage (without jargon)
-        if prob_pct_change is not None:
-            prob_display = f"<span style='color: {movement_color}; font-weight: 600; font-size: 1.05em;'>{movement_arrow} {prob_pct_change:+.1f}%</span>"
-        else:
-            prob_display = ""
-        
-        # Check if updated in last 2 minutes for live indicator
-        is_live = minutes_ago <= 2
-        live_indicator = f'<span class="live-indicator {live_class}"></span>' if is_live else ''
         
         # Calculate implied probabilities
         start_prob = implied_prob(opening_odds)
         current_prob = implied_prob(latest_odds)
         
-        # Calculate delta (percentage point change)
+        # Calculate delta (percentage point change) for strength label
+        abs_delta_pp = None
         if start_prob is not None and current_prob is not None:
             delta = (current_prob - start_prob) * 100
+            abs_delta_pp = abs(delta)
             start_prob_pct = start_prob * 100
             current_prob_pct = current_prob * 100
-            implied_chance_display = f"Implied chance: {start_prob_pct:.1f}% → {current_prob_pct:.1f}% ({delta:+.1f}%)"
+            delta_formatted = f"{delta:+.1f}%"
         else:
-            implied_chance_display = ""
+            delta = None
+            start_prob_pct = None
+            current_prob_pct = None
+            delta_formatted = ""
         
-        # Create modern card row with shortened/drifted terminology
+        # Determine strength badge
+        strength_badge = ""
+        if abs_delta_pp is not None:
+            if abs_delta_pp >= 5:
+                strength_badge = '<span class="strength-badge strong">Strong</span>'
+            elif abs_delta_pp >= 3:
+                strength_badge = '<span class="strength-badge medium">Medium</span>'
+        
+        # Format time display
+        if minutes_ago < 1:
+            time_display = "just now"
+        else:
+            time_display = f"{minutes_ago}m ago"
+        
+        # Line 1 (primary): "{Side} — shortened/drifted ({start_odds} → {current_odds})"
+        line1 = f'{outcome} — <span style="color: {movement_color}; font-weight: 600;">{movement_text}</span> ({opening_odds:.2f} → {latest_odds:.2f}){strength_badge}'
+        
+        # Line 2 (secondary, muted): "Implied chance: {start%} → {current%} ({delta%}) · Updated {time}"
+        if start_prob_pct is not None and current_prob_pct is not None:
+            line2 = f"Implied chance: {start_prob_pct:.1f}% → {current_prob_pct:.1f}% ({delta_formatted}) · Updated {time_display}"
+        else:
+            line2 = f"Updated {time_display}"
+        
+        # Create modern card row with new formatting
         row_html = f"""
         <div class="mover-card">
             <div class="mover-match">{home} vs {away} ({league_flag_html} {league_name})</div>
-            <div class="mover-details">{outcome} · <span style="color: {movement_color}; font-weight: 600; font-size: 1.05em;">{movement_text}</span> ({odds_display}) · {prob_display}{live_indicator} · Updated {minutes_ago}m ago</div>
-            {f'<div class="mover-details" style="font-size: 0.85rem; margin-top: 4px; color: rgba(255, 255, 255, 0.65);">{implied_chance_display}</div>' if implied_chance_display else ''}
+            <div class="mover-line-primary">{line1}</div>
+            <div class="mover-line-secondary">{line2}</div>
         </div>
         """
         st.markdown(row_html, unsafe_allow_html=True)
