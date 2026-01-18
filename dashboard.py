@@ -926,16 +926,16 @@ def get_opening_odds(league, home_team, away_team, bookmaker, time_window=None):
     if time_window is None:
         # "Since Open" - get earliest recorded odds
         query = """
-    SELECT home_odds, away_odds, draw_odds, timestamp
-    FROM odds
-    WHERE league = %s 
-        AND home_team = %s 
-        AND away_team = %s
-        AND bookmaker = %s
-    ORDER BY timestamp ASC
-    LIMIT 1
-    """
-    cursor.execute(query, (league, home_team, away_team, bookmaker))
+        SELECT home_odds, away_odds, draw_odds, timestamp
+        FROM odds
+        WHERE league = %s 
+            AND home_team = %s 
+            AND away_team = %s
+            AND bookmaker = %s
+        ORDER BY timestamp ASC
+        LIMIT 1
+        """
+        cursor.execute(query, (league, home_team, away_team, bookmaker))
     else:
         # Get earliest odds within time window
         cutoff_time = datetime.now() - time_window
