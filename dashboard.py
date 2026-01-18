@@ -1299,7 +1299,7 @@ else:
             # Format kickoff time
             if commence_time:
                 kickoff_str = commence_time.strftime('%H:%M')
-        else:
+            else:
                 kickoff_str = "—"
             
             # Calculate minutes ago
@@ -1373,7 +1373,7 @@ else:
                 st.session_state.match_data_cache = {}
             
             # Create clickable row buttons (positioned below table for selection)
-        st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
             match_options = ["— Select a match —"] + [f"{h} vs {a} ({l})" for _, _, (l, h, a), _ in table_rows_html]
             match_keys_list = [None] + [mk for mk, _, _, _ in table_rows_html]
             
@@ -1413,134 +1413,134 @@ else:
                 st.markdown(league_flag_html, unsafe_allow_html=True)
             with detail_col:
                     # Display odds table
-                st.markdown("#### Current Odds")
+                    st.markdown("#### Current Odds")
                     
                     # Create table with opening odds comparison
                     table_rows = []
-                for row in selected_match_data:
+                    for row in selected_match_data:
                         bookmaker = row[3]
                         home_odds = row[4]
                         draw_odds = row[6]
                         away_odds = row[5]
                         timestamp = row[7].strftime('%H:%M:%S')
                         
-                    # Get opening odds for this bookmaker with time window
-                    opening = get_opening_odds(league, home, away, bookmaker, window_timedelta)
-                    
-                    # Format Home odds with Open, Current, and implied probability change
-                    if opening:
-                        home_prob_pct = implied_prob_pct_change(opening['home_odds'], home_odds)
-                        if home_prob_pct is not None:
-                            # Determine shortened/drifted
-                            if home_odds < opening['home_odds']:
-                                home_movement = "shortened"
-                                home_color = "#44ff44"  # Green
-                                home_arrow = "↓"
+                        # Get opening odds for this bookmaker with time window
+                        opening = get_opening_odds(league, home, away, bookmaker, window_timedelta)
+                        
+                        # Format Home odds with Open, Current, and implied probability change
+                        if opening:
+                            home_prob_pct = implied_prob_pct_change(opening['home_odds'], home_odds)
+                            if home_prob_pct is not None:
+                                # Determine shortened/drifted
+                                if home_odds < opening['home_odds']:
+                                    home_movement = "shortened"
+                                    home_color = "#44ff44"  # Green
+                                    home_arrow = "↓"
+                                else:
+                                    home_movement = "drifted"
+                                    home_color = "#ff4444"  # Red
+                                    home_arrow = "↑"
+                                home_prob_display = f"<span style='color: {home_color}; font-weight: bold;'>{home_arrow} {home_prob_pct:+.1f}%</span>"
+                                home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} ({home_movement}) {home_prob_display}"
                             else:
-                                home_movement = "drifted"
-                                home_color = "#ff4444"  # Red
-                                home_arrow = "↑"
-                            home_prob_display = f"<span style='color: {home_color}; font-weight: bold;'>{home_arrow} {home_prob_pct:+.1f}%</span>"
-                            home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f} ({home_movement}) {home_prob_display}"
+                                home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f}"
                         else:
-                            home_display = f"{opening['home_odds']:.2f} → {home_odds:.2f}"
-                    else:
-                        home_display = f"{home_odds:.2f} (No opening data)"
-                    
-                    # Format Draw odds
-                    if opening:
-                        draw_prob_pct = implied_prob_pct_change(opening['draw_odds'], draw_odds)
-                        if draw_prob_pct is not None:
-                            if draw_odds < opening['draw_odds']:
-                                draw_movement = "shortened"
-                                draw_color = "#44ff44"
-                                draw_arrow = "↓"
+                            home_display = f"{home_odds:.2f} (No opening data)"
+                        
+                        # Format Draw odds
+                        if opening:
+                            draw_prob_pct = implied_prob_pct_change(opening['draw_odds'], draw_odds)
+                            if draw_prob_pct is not None:
+                                if draw_odds < opening['draw_odds']:
+                                    draw_movement = "shortened"
+                                    draw_color = "#44ff44"
+                                    draw_arrow = "↓"
+                                else:
+                                    draw_movement = "drifted"
+                                    draw_color = "#ff4444"
+                                    draw_arrow = "↑"
+                                draw_prob_display = f"<span style='color: {draw_color}; font-weight: bold;'>{draw_arrow} {draw_prob_pct:+.1f}%</span>"
+                                draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} ({draw_movement}) {draw_prob_display}"
                             else:
-                                draw_movement = "drifted"
-                                draw_color = "#ff4444"
-                                draw_arrow = "↑"
-                            draw_prob_display = f"<span style='color: {draw_color}; font-weight: bold;'>{draw_arrow} {draw_prob_pct:+.1f}%</span>"
-                            draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f} ({draw_movement}) {draw_prob_display}"
+                                draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f}"
                         else:
-                            draw_display = f"{opening['draw_odds']:.2f} → {draw_odds:.2f}"
-                    else:
-                        draw_display = f"{draw_odds:.2f} (No opening data)"
-                    
-                    # Format Away odds
-                    if opening:
-                        away_prob_pct = implied_prob_pct_change(opening['away_odds'], away_odds)
-                        if away_prob_pct is not None:
-                            if away_odds < opening['away_odds']:
-                                away_movement = "shortened"
-                                away_color = "#44ff44"
-                                away_arrow = "↓"
+                            draw_display = f"{draw_odds:.2f} (No opening data)"
+                        
+                        # Format Away odds
+                        if opening:
+                            away_prob_pct = implied_prob_pct_change(opening['away_odds'], away_odds)
+                            if away_prob_pct is not None:
+                                if away_odds < opening['away_odds']:
+                                    away_movement = "shortened"
+                                    away_color = "#44ff44"
+                                    away_arrow = "↓"
+                                else:
+                                    away_movement = "drifted"
+                                    away_color = "#ff4444"
+                                    away_arrow = "↑"
+                                away_prob_display = f"<span style='color: {away_color}; font-weight: bold;'>{away_arrow} {away_prob_pct:+.1f}%</span>"
+                                away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} ({away_movement}) {away_prob_display}"
                             else:
-                                away_movement = "drifted"
-                                away_color = "#ff4444"
-                                away_arrow = "↑"
-                            away_prob_display = f"<span style='color: {away_color}; font-weight: bold;'>{away_arrow} {away_prob_pct:+.1f}%</span>"
-                            away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f} ({away_movement}) {away_prob_display}"
+                                away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f}"
                         else:
-                            away_display = f"{opening['away_odds']:.2f} → {away_odds:.2f}"
-                    else:
-                        away_display = f"{away_odds:.2f} (No opening data)"
-                    
-                    table_rows.append({
-                        'Bookmaker': bookmaker,
-                        'Home': home_display,
-                        'Draw': draw_display,
-                        'Away': away_display,
-                        'Updated': timestamp
-                    })
-                
-                # Create HTML table
-                html_table = "<div class='odds-table-container'>"
-                html_table += "<table class='odds-table-desktop' style='width: 100%; border-collapse: collapse;'>"
-                html_table += "<thead><tr style='border-bottom: 2px solid rgba(255,255,255,0.2);'>"
-                html_table += "<th style='text-align: left; padding: 8px;'>Bookmaker</th>"
-                html_table += "<th style='text-align: center; padding: 8px;'>Home</th>"
-                html_table += "<th style='text-align: center; padding: 8px;'>Draw</th>"
-                html_table += "<th style='text-align: center; padding: 8px;'>Away</th>"
-                html_table += "<th style='text-align: right; padding: 8px;'>Updated</th>"
-                html_table += "</tr></thead><tbody>"
-                
-                for row_data in table_rows:
-                    html_table += "<tr style='border-bottom: 1px solid rgba(255,255,255,0.1);'>"
-                    html_table += f"<td style='padding: 8px;'><strong>{row_data['Bookmaker']}</strong></td>"
-                    html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Home']}</td>"
-                    html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Draw']}</td>"
-                    html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Away']}</td>"
-                    html_table += f"<td style='padding: 8px; text-align: right;'>{row_data['Updated']}</td>"
-                    html_table += "</tr>"
-                
-                html_table += "</tbody></table></div>"
-                st.markdown(html_table, unsafe_allow_html=True)
-                
-                # Historical trends
-                history_data = load_odds_history(league, home, away, hours=24)
-                
-                if history_data and len(history_data) >= 2:
-                    # Process history data
-                    history = []
-                    for row in history_data:
-                        history.append({
-                            'timestamp': row[4],
-                            'home_odds': row[1],
-                            'draw_odds': row[3],
-                            'away_odds': row[2]
+                            away_display = f"{away_odds:.2f} (No opening data)"
+                        
+                        table_rows.append({
+                            'Bookmaker': bookmaker,
+                            'Home': home_display,
+                            'Draw': draw_display,
+                            'Away': away_display,
+                            'Updated': timestamp
                         })
                     
-                    history.sort(key=lambda x: x['timestamp'])
+                    # Create HTML table
+                    html_table = "<div class='odds-table-container'>"
+                    html_table += "<table class='odds-table-desktop' style='width: 100%; border-collapse: collapse;'>"
+                    html_table += "<thead><tr style='border-bottom: 2px solid rgba(255,255,255,0.2);'>"
+                    html_table += "<th style='text-align: left; padding: 8px;'>Bookmaker</th>"
+                    html_table += "<th style='text-align: center; padding: 8px;'>Home</th>"
+                    html_table += "<th style='text-align: center; padding: 8px;'>Draw</th>"
+                    html_table += "<th style='text-align: center; padding: 8px;'>Away</th>"
+                    html_table += "<th style='text-align: right; padding: 8px;'>Updated</th>"
+                    html_table += "</tr></thead><tbody>"
                     
-                    seen_timestamps = set()
-                    unique_history = []
-                    for h in reversed(history):
-                        if h['timestamp'] not in seen_timestamps:
-                            seen_timestamps.add(h['timestamp'])
-                            unique_history.append(h)
-                    unique_history.reverse()
+                    for row_data in table_rows:
+                        html_table += "<tr style='border-bottom: 1px solid rgba(255,255,255,0.1);'>"
+                        html_table += f"<td style='padding: 8px;'><strong>{row_data['Bookmaker']}</strong></td>"
+                        html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Home']}</td>"
+                        html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Draw']}</td>"
+                        html_table += f"<td style='padding: 8px; text-align: center;'>{row_data['Away']}</td>"
+                        html_table += f"<td style='padding: 8px; text-align: right;'>{row_data['Updated']}</td>"
+                        html_table += "</tr>"
                     
-                    if len(unique_history) >= 2:
+                    html_table += "</tbody></table></div>"
+                    st.markdown(html_table, unsafe_allow_html=True)
+                    
+                    # Historical trends
+                    history_data = load_odds_history(league, home, away, hours=24)
+                    
+                    if history_data and len(history_data) >= 2:
+                        # Process history data
+                        history = []
+                        for row in history_data:
+                            history.append({
+                                'timestamp': row[4],
+                                'home_odds': row[1],
+                                'draw_odds': row[3],
+                                'away_odds': row[2]
+                            })
+                        
+                        history.sort(key=lambda x: x['timestamp'])
+                        
+                        seen_timestamps = set()
+                        unique_history = []
+                        for h in reversed(history):
+                            if h['timestamp'] not in seen_timestamps:
+                                seen_timestamps.add(h['timestamp'])
+                                unique_history.append(h)
+                        unique_history.reverse()
+                        
+                        if len(unique_history) >= 2:
                         timestamps = [h['timestamp'] for h in unique_history]
                         home_vals = [float(h['home_odds']) for h in unique_history]
                         draw_vals = [float(h['draw_odds']) for h in unique_history]
@@ -1610,8 +1610,8 @@ else:
                             st.markdown(f"**Open:** {away_open:.2f} • **Now:** {away_now:.2f}")
                             fig_away = create_focused_graph(timestamps, away_vals, 'Away', '#95E1D3', away_open, away_now)
                             st.plotly_chart(fig_away, use_container_width=True)
-                else:
-                    st.info("Not enough historical data yet. Check back after a few updates.")
+                    else:
+                        st.info("Not enough historical data yet. Check back after a few updates.")
     
     # Auto-refresh toggle
     st.sidebar.markdown("<br>", unsafe_allow_html=True)
