@@ -1541,7 +1541,7 @@ else:
                         unique_history.reverse()
                         
                         if len(unique_history) >= 2:
-                        timestamps = [h['timestamp'] for h in unique_history]
+                            timestamps = [h['timestamp'] for h in unique_history]
                         home_vals = [float(h['home_odds']) for h in unique_history]
                         draw_vals = [float(h['draw_odds']) for h in unique_history]
                         away_vals = [float(h['away_odds']) for h in unique_history]
