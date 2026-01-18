@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import os
 import pandas as pd
 import plotly.graph_objects as go
+import pytz
 
 # Page configuration with custom favicon
 st.set_page_config(
@@ -338,7 +339,7 @@ st.markdown("""
         margin-bottom: 0.5rem !important;
     }
     
-    /* Today's Tape table styling */
+    /* Market Watch table styling */
     .tape-table {
         width: 100%;
         border-collapse: collapse;
@@ -1298,146 +1299,194 @@ else:
         filtered_data = [row for row in filtered_data 
                         if search_lower in row[1].lower() or search_lower in row[2].lower()]
     
-    # Group by date first, then by match
-    matches_by_date = {}
-    for row in filtered_data:
-        league, home, away = row[0], row[1], row[2]
-        match_date = row[8].date() if row[8] else row[7].date()  # Use commence_time if available, else timestamp
-        
-        if match_date not in matches_by_date:
-            matches_by_date[match_date] = {}
-        
-        key = (league, home, away)
-        if key not in matches_by_date[match_date]:
-            matches_by_date[match_date][key] = []
-        matches_by_date[match_date][key].append(row)
+    # Define 72-hour rolling window (now + 5 minutes to now + 72 hours)
+    now_utc = datetime.now(timezone.utc)
+    window_start = now_utc + timedelta(minutes=5)
+    window_end = now_utc + timedelta(hours=72)
     
-    # Filter to show only today's matches for compact tape view
-    today = datetime.now(timezone.utc).date()
-    if today in matches_by_date:
-        st.markdown("### Today's Tape")
+    # Europe/Dublin timezone for local date grouping
+    dublin_tz = pytz.timezone('Europe/Dublin')
+    
+    # Filter matches within 72-hour window and group by local calendar date
+    matches_by_local_date = {}
+    for row in filtered_data:
+        commence_time = row[8] if row[8] else None
         
-        # Build compact table
-        table_rows_html = []
-        for (league, home, away), match_data in matches_by_date[today].items():
-            # Get latest odds for this match (from first bookmaker in match_data, should be Pinnacle)
-            latest_row = match_data[0]
-            bookmaker = latest_row[3]
-            home_odds = latest_row[4]
-            draw_odds = latest_row[6]
-            away_odds = latest_row[5]
-            commence_time = latest_row[8] if latest_row[8] else None
-            timestamp = latest_row[7]
-            
-            # Apply pre-match filter: exclude matches that have started or are within 5 minutes
-            if not is_pre_match(commence_time):
-                continue
-            
-            # Format kickoff time
-            if commence_time:
-                kickoff_str = commence_time.strftime('%H:%M')
-            else:
-                kickoff_str = "—"
-            
-            # Calculate minutes ago (using UTC)
-            now_utc = datetime.now(timezone.utc)
-            if timestamp.tzinfo is None:
-                timestamp_utc = timestamp.replace(tzinfo=timezone.utc)
-            else:
-                timestamp_utc = timestamp.astimezone(timezone.utc)
-            minutes_ago_val = int((now_utc - timestamp_utc).total_seconds() / 60)
-            if minutes_ago_val < 1:
-                updated_str = "just now"
-            else:
-                updated_str = f"{minutes_ago_val}m ago"
-            
-            # Get biggest mover
-            current_odds_dict = {
-                'home_odds': home_odds,
-                'draw_odds': draw_odds,
-                'away_odds': away_odds
-            }
-            biggest_mover = get_biggest_mover_for_match(league, home, away, bookmaker, current_odds_dict, window_timedelta)
-            
-            # Format mover info
-            if biggest_mover:
-                mover_display = f"{biggest_mover['outcome']} — <span style='color: {biggest_mover['movement_color']};'>{biggest_mover['movement_text']}</span> ({biggest_mover['opening_odds']:.2f} → {biggest_mover['current_odds']:.2f})"
-                strength_badge_html = ""
-                if biggest_mover['strength_badge']:
-                    badge_class = biggest_mover['strength_badge'].lower()
-                    strength_badge_html = f"<span class='strength-badge-tape {badge_class}'>{biggest_mover['strength_badge']}</span>"
-            else:
-                mover_display = "—"
-                strength_badge_html = ""
-            
-            # Create match key for selection
-            match_key = f"{league}_{home}_{away}"
-            is_selected = st.session_state.selected_match == match_key
-            
-            # Build row HTML
-            row_class = "tape-row selected" if is_selected else "tape-row"
-            row_html = f"""
-            <tr class="{row_class}" onclick="window.location.hash='match_{match_key}'" style="cursor: pointer;">
-                <td>{kickoff_str}</td>
-                <td><strong>{home} vs {away}</strong></td>
-                <td style="text-align: center;">{home_odds:.2f} / {draw_odds:.2f} / {away_odds:.2f}</td>
-                <td>{mover_display}</td>
-                <td>{strength_badge_html}</td>
-                <td style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">{updated_str}</td>
-            </tr>
-            """
-            table_rows_html.append((match_key, row_html, (league, home, away), match_data))
+        # Skip matches without commence_time
+        if commence_time is None:
+            continue
         
-        # Display table with clickable rows
-        if table_rows_html:
-            # Create table header
-            tape_table_html = """
-            <table class="tape-table">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Match</th>
-                        <th style="text-align: center;">1X2 Odds</th>
-                        <th>Biggest Mover</th>
-                        <th>Strength</th>
-                        <th>Updated</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """
-            for match_key, row_html, match_info, match_data in table_rows_html:
-                tape_table_html += row_html
-            tape_table_html += "</tbody></table>"
-            st.markdown(tape_table_html, unsafe_allow_html=True)
-            
-            # Store match data in session state for detail view access
-            if 'match_data_cache' not in st.session_state:
-                st.session_state.match_data_cache = {}
-            
-            # Create clickable row buttons (positioned below table for selection)
-            st.markdown("<br>", unsafe_allow_html=True)
-            match_options = ["— Select a match —"] + [f"{h} vs {a} ({l})" for _, _, (l, h, a), _ in table_rows_html]
-            match_keys_list = [None] + [mk for mk, _, _, _ in table_rows_html]
-            
-            selected_idx = 0
-            if st.session_state.selected_match:
-                try:
-                    selected_idx = match_keys_list.index(st.session_state.selected_match)
-                except ValueError:
-                    selected_idx = 0
-            
-            selected_match_display = st.selectbox("Select match for details", match_options, index=selected_idx, key="match_selector")
-            
-            if selected_match_display != "— Select a match —":
-                selected_match_idx = match_options.index(selected_match_display) - 1
-                st.session_state.selected_match = match_keys_list[selected_match_idx + 1]
-                # Store match data
-                _, _, match_info, match_data = table_rows_html[selected_match_idx]
-                st.session_state.match_data_cache[st.session_state.selected_match] = (match_info, match_data)
-            else:
-                st.session_state.selected_match = None
+        # Ensure commence_time is timezone-aware (assume UTC if naive)
+        if commence_time.tzinfo is None:
+            commence_time_utc = commence_time.replace(tzinfo=timezone.utc)
         else:
-            st.info("No matches found for today.")
+            commence_time_utc = commence_time.astimezone(timezone.utc)
+        
+        # Filter: window_start < kickoff_utc < window_end
+        if commence_time_utc <= window_start or commence_time_utc >= window_end:
+            continue
+        
+        # Convert to Europe/Dublin timezone for local date grouping
+        commence_time_local = commence_time_utc.astimezone(dublin_tz)
+        local_date = commence_time_local.date()
+        
+        league, home, away = row[0], row[1], row[2]
+        key = (league, home, away)
+        
+        if local_date not in matches_by_local_date:
+            matches_by_local_date[local_date] = {}
+        
+        if key not in matches_by_local_date[local_date]:
+            matches_by_local_date[local_date][key] = []
+        matches_by_local_date[local_date][key].append(row)
+    
+    # Display Market Watch with matches grouped by local date
+    if matches_by_local_date:
+        st.markdown("### Market Watch")
+        
+        # Sort dates chronologically
+        sorted_dates = sorted(matches_by_local_date.keys())
+        
+        # Process each date group
+        for local_date in sorted_dates:
+            # Format date header: "Monday 19 January"
+            date_header = local_date.strftime('%A %d %B')
+            st.markdown(f"#### {date_header}")
+            
+            # Build compact table for this date
+            table_rows_html = []
+            for (league, home, away), match_data in matches_by_local_date[local_date].items():
+                # Get latest odds for this match (from first bookmaker in match_data, should be Pinnacle)
+                latest_row = match_data[0]
+                bookmaker = latest_row[3]
+                home_odds = latest_row[4]
+                draw_odds = latest_row[6]
+                away_odds = latest_row[5]
+                commence_time = latest_row[8] if latest_row[8] else None
+                timestamp = latest_row[7]
+                
+                # Format kickoff time in local timezone (Europe/Dublin)
+                if commence_time:
+                    if commence_time.tzinfo is None:
+                        commence_time_utc = commence_time.replace(tzinfo=timezone.utc)
+                    else:
+                        commence_time_utc = commence_time.astimezone(timezone.utc)
+                    commence_time_local = commence_time_utc.astimezone(dublin_tz)
+                    kickoff_str = commence_time_local.strftime('%H:%M')
+                else:
+                    kickoff_str = "—"
+                
+                # Calculate minutes ago (using UTC)
+                if timestamp.tzinfo is None:
+                    timestamp_utc = timestamp.replace(tzinfo=timezone.utc)
+                else:
+                    timestamp_utc = timestamp.astimezone(timezone.utc)
+                minutes_ago_val = int((now_utc - timestamp_utc).total_seconds() / 60)
+                if minutes_ago_val < 1:
+                    updated_str = "just now"
+                else:
+                    updated_str = f"{minutes_ago_val}m ago"
+                
+                # Get biggest mover
+                current_odds_dict = {
+                    'home_odds': home_odds,
+                    'draw_odds': draw_odds,
+                    'away_odds': away_odds
+                }
+                biggest_mover = get_biggest_mover_for_match(league, home, away, bookmaker, current_odds_dict, window_timedelta)
+                
+                # Format mover info
+                if biggest_mover:
+                    mover_display = f"{biggest_mover['outcome']} — <span style='color: {biggest_mover['movement_color']};'>{biggest_mover['movement_text']}</span> ({biggest_mover['opening_odds']:.2f} → {biggest_mover['current_odds']:.2f})"
+                    strength_badge_html = ""
+                    if biggest_mover['strength_badge']:
+                        badge_class = biggest_mover['strength_badge'].lower()
+                        strength_badge_html = f"<span class='strength-badge-tape {badge_class}'>{biggest_mover['strength_badge']}</span>"
+                else:
+                    mover_display = "—"
+                    strength_badge_html = ""
+                
+                # Create match key for selection
+                match_key = f"{league}_{home}_{away}"
+                is_selected = st.session_state.selected_match == match_key
+                
+                # Build row HTML
+                row_class = "tape-row selected" if is_selected else "tape-row"
+                row_html = f"""
+                <tr class="{row_class}" onclick="window.location.hash='match_{match_key}'" style="cursor: pointer;">
+                    <td>{kickoff_str}</td>
+                    <td><strong>{home} vs {away}</strong></td>
+                    <td style="text-align: center;">{home_odds:.2f} / {draw_odds:.2f} / {away_odds:.2f}</td>
+                    <td>{mover_display}</td>
+                    <td>{strength_badge_html}</td>
+                    <td style="color: rgba(255,255,255,0.6); font-size: 0.85rem;">{updated_str}</td>
+                </tr>
+                """
+                table_rows_html.append((match_key, row_html, (league, home, away), match_data))
+            
+            # Display table for this date
+            if table_rows_html:
+                # Create table header
+                tape_table_html = """
+                <table class="tape-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Match</th>
+                            <th style="text-align: center;">1X2 Odds</th>
+                            <th>Biggest Mover</th>
+                            <th>Strength</th>
+                            <th>Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                """
+                for match_key, row_html, match_info, match_data in table_rows_html:
+                    tape_table_html += row_html
+                tape_table_html += "</tbody></table>"
+                st.markdown(tape_table_html, unsafe_allow_html=True)
+                
+                # Store match data in session state for detail view access
+                if 'match_data_cache' not in st.session_state:
+                    st.session_state.match_data_cache = {}
+                
+                # Store all matches from all dates for selection
+                for match_key, row_html, match_info, match_data in table_rows_html:
+                    st.session_state.match_data_cache[match_key] = (match_info, match_data)
+        
+        # Create match selector (once, after all dates)
+        if matches_by_local_date:
+            all_match_rows = []
+            for local_date in sorted_dates:
+                if local_date in matches_by_local_date:
+                    for (league, home, away), match_data in matches_by_local_date[local_date].items():
+                        match_key = f"{league}_{home}_{away}"
+                        all_match_rows.append((match_key, (league, home, away), match_data))
+            
+            if all_match_rows:
+                st.markdown("<br>", unsafe_allow_html=True)
+                match_options = ["— Select a match —"] + [f"{h} vs {a} ({l})" for _, (l, h, a), _ in all_match_rows]
+                match_keys_list = [None] + [mk for mk, _, _ in all_match_rows]
+                
+                selected_idx = 0
+                if st.session_state.selected_match:
+                    try:
+                        selected_idx = match_keys_list.index(st.session_state.selected_match)
+                    except ValueError:
+                        selected_idx = 0
+                
+                selected_match_display = st.selectbox("Select match for details", match_options, index=selected_idx, key="match_selector")
+                
+                if selected_match_display != "— Select a match —":
+                    selected_match_idx = match_options.index(selected_match_display) - 1
+                    st.session_state.selected_match = match_keys_list[selected_match_idx + 1]
+                    # Store match data
+                    _, match_info, match_data = all_match_rows[selected_match_idx]
+                    st.session_state.match_data_cache[st.session_state.selected_match] = (match_info, match_data)
+                else:
+                    st.session_state.selected_match = None
+    else:
+        st.info("No fixtures in the next 72 hours.")
     
     # Display selected match detail view
     if st.session_state.selected_match and 'match_data_cache' in st.session_state:
