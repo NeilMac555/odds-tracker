@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS odds (
     home_odds REAL NOT NULL,
     away_odds REAL NOT NULL,
     draw_odds REAL NOT NULL,
+    commence_time TIMESTAMP,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 ''')
@@ -34,6 +35,10 @@ CREATE INDEX IF NOT EXISTS idx_odds_timestamp ON odds(timestamp DESC)
 
 cursor.execute('''
 CREATE INDEX IF NOT EXISTS idx_odds_match ON odds(league, home_team, away_team)
+''')
+
+cursor.execute('''
+CREATE INDEX IF NOT EXISTS idx_odds_commence_time ON odds(commence_time)
 ''')
 
 conn.commit()

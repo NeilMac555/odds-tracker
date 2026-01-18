@@ -357,11 +357,25 @@ if movers:
         is_live = minutes_ago <= 2
         live_indicator = f'<span class="live-indicator {live_class}"></span>' if is_live else ''
         
+        # Calculate implied probabilities
+        start_prob = implied_prob(opening_odds)
+        current_prob = implied_prob(latest_odds)
+        
+        # Calculate delta (percentage point change)
+        if start_prob is not None and current_prob is not None:
+            delta = (current_prob - start_prob) * 100
+            start_prob_pct = start_prob * 100
+            current_prob_pct = current_prob * 100
+            implied_chance_display = f"Implied chance: {start_prob_pct:.1f}% → {current_prob_pct:.1f}% ({delta:+.1f}%)"
+        else:
+            implied_chance_display = ""
+        
         # Create modern card row with shortened/drifted terminology
         row_html = f"""
         <div class="mover-card">
             <div class="mover-match">{home} vs {away} ({league_flag_html} {league_name})</div>
             <div class="mover-details">{outcome} · <span style="color: {movement_color}; font-weight: 600; font-size: 1.05em;">{movement_text}</span> ({odds_display}) · {prob_display}{live_indicator} · Updated {minutes_ago}m ago</div>
+            {f'<div class="mover-details" style="font-size: 0.85rem; margin-top: 4px; color: rgba(255, 255, 255, 0.65);">{implied_chance_display}</div>' if implied_chance_display else ''}
         </div>
         """
         st.markdown(row_html, unsafe_allow_html=True)
