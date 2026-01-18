@@ -199,9 +199,17 @@ st.markdown("""
 # Hero Header Section
 st.markdown('<p class="main-header">📊 Biggest Movers</p>', unsafe_allow_html=True)
 
-# Time window selector
+# Use shared time window selector from dashboard (session state)
+if 'time_window_selection' not in st.session_state:
+    st.session_state.time_window_selection = "6h"
+
 time_window_options = ["1h", "3h", "6h", "24h", "Since Open"]
-selected_window = st.selectbox("Time Window", time_window_options, index=2)  # Default to "6h" (index 2)
+selected_window = st.selectbox("Time Window", time_window_options, 
+                                index=time_window_options.index(st.session_state.time_window_selection),
+                                key="biggest_movers_time_window")
+
+# Update session state for sharing with dashboard
+st.session_state.time_window_selection = selected_window
 
 # Convert time window to timedelta and subtitle text
 if selected_window == "Since Open":
